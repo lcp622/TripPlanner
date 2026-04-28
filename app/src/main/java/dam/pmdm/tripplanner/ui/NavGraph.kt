@@ -78,7 +78,10 @@ fun NavGraph(
 
     val startDestination = if (authViewModel.estaAutenticado) Rutas.VIAJES else Rutas.LOGIN
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination
+    )  {
 
         composable(Rutas.LOGIN) {
             LoginScreen(

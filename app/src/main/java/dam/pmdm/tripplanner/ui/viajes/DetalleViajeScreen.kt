@@ -21,7 +21,6 @@ import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.platform.LocalLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +32,7 @@ fun DetalleViajeScreen(
 ) {
     var tabSeleccionada by remember { mutableIntStateOf(0) }
     val tabs = listOf("Itinerario", "Gastos", "Rutas")
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
     LaunchedEffect(viaje.idViaje) {
         actividadViewModel.cargarActividades(viaje.idViaje)
@@ -54,7 +53,7 @@ fun DetalleViajeScreen(
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Hero header con gradiente
+            // Hero header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -127,12 +126,11 @@ fun DetalleViajeScreen(
                 }
             }
 
-            // Info card
+            // Info card sin offset
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .offset(y = (-20).dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(4.dp),
                 colors = CardDefaults.cardColors(

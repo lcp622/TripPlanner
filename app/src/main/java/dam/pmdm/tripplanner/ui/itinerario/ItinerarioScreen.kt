@@ -62,13 +62,13 @@ fun ItinerarioScreen(
                             text = "No hay actividades aún",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = TripTextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Pulsa + para añadir una actividad",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TripTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
@@ -79,7 +79,9 @@ fun ItinerarioScreen(
                     }
 
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -92,7 +94,7 @@ fun ItinerarioScreen(
                                     text = "Día ${diaIndex + 1} · ${dateFormat.format(Date(fecha))}",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
-                                    color = TripTextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(vertical = 8.dp)
                                 )
                             }
@@ -137,7 +139,6 @@ fun ActividadCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Hora en círculo
             if (actividad.horaInicio != null) {
                 Box(
                     modifier = Modifier
@@ -161,7 +162,7 @@ fun ActividadCard(
                     text = actividad.titulo,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
-                    color = TripTextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 if (actividad.lugar != null) {
                     Spacer(modifier = Modifier.height(4.dp))
@@ -169,14 +170,14 @@ fun ActividadCard(
                         Icon(
                             Icons.Default.LocationOn,
                             contentDescription = null,
-                            tint = TripGray,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(2.dp))
                         Text(
                             text = actividad.lugar,
                             fontSize = 12.sp,
-                            color = TripTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -185,7 +186,7 @@ fun ActividadCard(
                     Text(
                         text = actividad.descripcion,
                         fontSize = 12.sp,
-                        color = TripTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2
                     )
                 }
