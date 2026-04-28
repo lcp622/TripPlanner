@@ -18,7 +18,7 @@ import dam.pmdm.tripplanner.data.local.entity.*
         RutaEntity::class,
         PuntoInteresEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class TripPlannerDatabase : RoomDatabase() {
@@ -42,7 +42,9 @@ abstract class TripPlannerDatabase : RoomDatabase() {
                     context.applicationContext,
                     TripPlannerDatabase::class.java,
                     "tripplanner_db"
-                ).build().also { INSTANCE = it }
+                )
+                    .fallbackToDestructiveMigration(true)
+                    .build().also { INSTANCE = it }
             }
         }
     }

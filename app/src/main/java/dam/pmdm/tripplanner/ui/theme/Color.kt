@@ -2,10 +2,25 @@ package dam.pmdm.tripplanner.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Primarios
+val TripBlue = Color(0xFF2196F3)
+val TripTeal = Color(0xFF00BCD4)
+val TripBlueDark = Color(0xFF1565C0)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Acento
+val TripOrange = Color(0xFFFF7043)
+val TripOrangeLight = Color(0xFFFFAB91)
+
+// Neutros
+val TripWhite = Color(0xFFFFFFFF)
+val TripBackground = Color(0xFFF5F7FA)
+val TripSurface = Color(0xFFFFFFFF)
+val TripGray = Color(0xFF9E9E9E)
+val TripGrayLight = Color(0xFFEEEEEE)
+val TripTextPrimary = Color(0xFF212121)
+val TripTextSecondary = Color(0xFF757575)
+
+// Estados viaje
+val ColorPlanificado = Color(0xFF2196F3)
+val ColorEnCurso = Color(0xFF4CAF50)
+val ColorFinalizado = Color(0xFF9E9E9E)

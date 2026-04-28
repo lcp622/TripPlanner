@@ -1,15 +1,15 @@
 package dam.pmdm.tripplanner.ui.viajes
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
-import dam.pmdm.tripplanner.data.repository.ViajeRepository
+import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import java.util.UUID
-import com.google.firebase.auth.FirebaseAuth
 
 sealed class ViajeUiState {
     object Loading : ViajeUiState()
@@ -17,7 +17,7 @@ sealed class ViajeUiState {
     data class Error(val mensaje: String) : ViajeUiState()
 }
 
-class ViajeViewModel(private val repository: ViajeRepository) : ViewModel() {
+class ViajeViewModel(private val repository: FirestoreViajeRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ViajeUiState>(ViajeUiState.Loading)
     val uiState: StateFlow<ViajeUiState> = _uiState
@@ -28,11 +28,9 @@ class ViajeViewModel(private val repository: ViajeRepository) : ViewModel() {
 
     private fun cargarViajes() {
         viewModelScope.launch {
-            repository.obtenerTodos()
+            repository.sincronizarViajes()
                 .catch { e -> _uiState.value = ViajeUiState.Error(e.message ?: "Error") }
-                .collect { viajes ->
-                    _uiState.value = ViajeUiState.Success(viajes)
-                }
+                .collect { viajes -> _uiState.value = ViajeUiState.Success(viajes) }
         }
     }
 
@@ -65,5 +63,15 @@ class ViajeViewModel(private val repository: ViajeRepository) : ViewModel() {
         viewModelScope.launch {
             repository.eliminarViaje(idViaje)
         }
+    }
+}
+
+class ViajeViewModelFactory(private val repository: FirestoreViajeRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(ViajeViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return ViajeViewModel(repository) as T
+        }
+        throw IllegalArgumentException("ViewModel desconocido")
     }
 }

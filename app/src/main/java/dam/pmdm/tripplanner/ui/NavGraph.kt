@@ -18,7 +18,8 @@ import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
 import dam.pmdm.tripplanner.data.local.entity.UsuarioEntity
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
 import dam.pmdm.tripplanner.data.repository.ActividadRepository
-import dam.pmdm.tripplanner.data.repository.ViajeRepository
+import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
+import dam.pmdm.tripplanner.ui.viajes.ViajeViewModelFactory
 import dam.pmdm.tripplanner.ui.auth.AuthViewModel
 import dam.pmdm.tripplanner.ui.auth.LoginScreen
 import dam.pmdm.tripplanner.ui.auth.RegisterScreen
@@ -28,7 +29,6 @@ import dam.pmdm.tripplanner.ui.itinerario.CrearActividadScreen
 import dam.pmdm.tripplanner.ui.viajes.CrearViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.DetalleViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModel
-import dam.pmdm.tripplanner.ui.viajes.ViajeViewModelFactory
 import dam.pmdm.tripplanner.ui.viajes.ViajesScreen
 import kotlinx.coroutines.launch
 
@@ -50,7 +50,7 @@ fun NavGraph(
     val db = TripPlannerDatabase.getInstance(context)
     val scope = rememberCoroutineScope()
 
-    val viajeRepository = ViajeRepository(db.viajeDao())
+    val viajeRepository = FirestoreViajeRepository(db.viajeDao())
     val viajeViewModel: ViajeViewModel = viewModel(factory = ViajeViewModelFactory(viajeRepository))
 
     val actividadRepository = ActividadRepository(db.actividadDao())
@@ -119,7 +119,7 @@ fun NavGraph(
             var viaje by remember(idViaje) { mutableStateOf<ViajeEntity?>(null) }
 
             LaunchedEffect(idViaje) {
-                viaje = viajeRepository.obtenerViajePorId(idViaje)
+                viaje = viajeRepository.obtenerViajePorIdFirestore(idViaje)
             }
 
             viaje?.let { v ->
