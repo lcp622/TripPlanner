@@ -28,4 +28,7 @@ interface ViajeDao {
     @Query("DELETE FROM VIAJE WHERE idViaje = :idViaje")
     suspend fun eliminarPorId(idViaje: String)
 
+    @Query("SELECT * FROM VIAJE")
+    fun obtenerTodos(): Flow<List<ViajeEntity>>
+
 }

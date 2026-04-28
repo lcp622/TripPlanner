@@ -36,4 +36,8 @@ class ViajeRepository(private val viajeDao: ViajeDao) {
     suspend fun eliminarViaje(idViaje: String) {
         viajeDao.eliminarPorId(idViaje)
     }
+
+    fun obtenerTodos(): Flow<List<ViajeEntity>> {
+        return viajeDao.obtenerTodos()
+    }
 }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import java.util.UUID
+import com.google.firebase.auth.FirebaseAuth
 
 sealed class ViajeUiState {
     object Loading : ViajeUiState()
@@ -26,11 +27,12 @@ class ViajeViewModel(private val repository: ViajeRepository) : ViewModel() {
     }
 
     private fun cargarViajes() {
-        val idUsuario = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
         viewModelScope.launch {
-            repository.obtenerMisViajes()
+            repository.obtenerTodos()
                 .catch { e -> _uiState.value = ViajeUiState.Error(e.message ?: "Error") }
-                .collect { viajes -> _uiState.value = ViajeUiState.Success(viajes) }
+                .collect { viajes ->
+                    _uiState.value = ViajeUiState.Success(viajes)
+                }
         }
     }
 
