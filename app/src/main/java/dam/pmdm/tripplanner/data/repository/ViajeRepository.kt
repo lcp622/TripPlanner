@@ -24,6 +24,7 @@ class ViajeRepository(private val viajeDao: ViajeDao) {
         return viajeDao.obtenerPorId(idViaje)
     }
 
+
     suspend fun crearViaje(viaje: ViajeEntity) {
         viajeDao.insertar(viaje)
     }

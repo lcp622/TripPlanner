@@ -26,6 +26,7 @@ class ViajeViewModel(private val repository: ViajeRepository) : ViewModel() {
     }
 
     private fun cargarViajes() {
+        val idUsuario = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
         viewModelScope.launch {
             repository.obtenerMisViajes()
                 .catch { e -> _uiState.value = ViajeUiState.Error(e.message ?: "Error") }

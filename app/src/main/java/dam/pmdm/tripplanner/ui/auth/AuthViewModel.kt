@@ -1,6 +1,7 @@
 package dam.pmdm.tripplanner.ui.auth
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dam.pmdm.tripplanner.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,9 +15,9 @@ sealed class AuthUiState {
     data class Error(val mensaje: String) : AuthUiState()
 }
 
-class AuthViewModel : ViewModel() {
+class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = AuthRepository()
+    private val repository = AuthRepository(application.applicationContext)
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState
