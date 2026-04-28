@@ -18,7 +18,7 @@ import dam.pmdm.tripplanner.data.local.entity.*
         RutaEntity::class,
         PuntoInteresEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class TripPlannerDatabase : RoomDatabase() {

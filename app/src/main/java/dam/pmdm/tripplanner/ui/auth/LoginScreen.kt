@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dam.pmdm.tripplanner.ui.theme.*
+import dam.pmdm.tripplanner.ui.theme.tripTextFieldColors
 
 @Composable
 fun LoginScreen(
@@ -53,7 +54,6 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo e icono
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -81,7 +81,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Tarjeta del formulario
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -106,10 +105,19 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        label = { Text("Email") },
+                        label = { Text("Email", color = TripTextPrimary) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TripTextPrimary,
+                            unfocusedTextColor = TripTextPrimary,
+                            focusedBorderColor = TripBlue,
+                            unfocusedBorderColor = TripGray,
+                            focusedLabelColor = TripBlue,
+                            unfocusedLabelColor = TripTextSecondary,
+                            cursorColor = TripBlue
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -117,11 +125,20 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Contraseña") },
+                        label = { Text("Contraseña", color = TripTextPrimary) },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TripTextPrimary,
+                            unfocusedTextColor = TripTextPrimary,
+                            focusedBorderColor = TripBlue,
+                            unfocusedBorderColor = TripGray,
+                            focusedLabelColor = TripBlue,
+                            unfocusedLabelColor = TripTextSecondary,
+                            cursorColor = TripBlue
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))

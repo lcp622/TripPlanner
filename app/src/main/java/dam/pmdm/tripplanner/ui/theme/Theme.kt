@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 private val LightColorScheme = lightColorScheme(
     primary = TripBlue,
@@ -29,14 +30,19 @@ private val LightColorScheme = lightColorScheme(
 
 private val DarkColorScheme = darkColorScheme(
     primary = TripTeal,
-    onPrimary = TripTextPrimary,
+    onPrimary = Color(0xFF003747),
+    primaryContainer = TripBlue,
+    onPrimaryContainer = Color.White,
     secondary = TripBlue,
-    onSecondary = TripWhite,
+    onSecondary = Color.White,
     tertiary = TripOrange,
     background = Color(0xFF121212),
+    onBackground = Color.White,
     surface = Color(0xFF1E1E1E),
-    onBackground = TripWhite,
-    onSurface = TripWhite
+    onSurface = Color.White,
+    surfaceVariant = Color(0xFF2C2C2C),
+    onSurfaceVariant = Color(0xFFCCCCCC),
+    error = Color(0xFFCF6679)
 )
 
 @Composable
@@ -60,4 +66,17 @@ fun TripPlannerTheme(
         typography = Typography,
         content = content
     )
+
+
 }
+
+@Composable
+fun tripTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    cursorColor = MaterialTheme.colorScheme.primary
+)
