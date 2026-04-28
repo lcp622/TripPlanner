@@ -1,5 +1,7 @@
 package dam.pmdm.tripplanner.ui
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,16 +21,17 @@ import dam.pmdm.tripplanner.data.local.entity.UsuarioEntity
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
 import dam.pmdm.tripplanner.data.repository.ActividadRepository
 import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
-import dam.pmdm.tripplanner.ui.viajes.ViajeViewModelFactory
 import dam.pmdm.tripplanner.ui.auth.AuthViewModel
 import dam.pmdm.tripplanner.ui.auth.LoginScreen
 import dam.pmdm.tripplanner.ui.auth.RegisterScreen
 import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModel
 import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModelFactory
 import dam.pmdm.tripplanner.ui.itinerario.CrearActividadScreen
+import dam.pmdm.tripplanner.ui.perfil.SettingsScreen
 import dam.pmdm.tripplanner.ui.viajes.CrearViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.DetalleViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModel
+import dam.pmdm.tripplanner.ui.viajes.ViajeViewModelFactory
 import dam.pmdm.tripplanner.ui.viajes.ViajesScreen
 import kotlinx.coroutines.launch
 
@@ -39,12 +42,15 @@ object Rutas {
     const val CREAR_VIAJE = "crear_viaje"
     const val DETALLE_VIAJE = "detalle_viaje/{idViaje}"
     const val CREAR_ACTIVIDAD = "crear_actividad/{idViaje}"
+    const val SETTINGS = "settings"
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel
 ) {
     val context = LocalContext.current
     val db = TripPlannerDatabase.getInstance(context)
@@ -97,12 +103,16 @@ fun NavGraph(
         }
 
         composable(Rutas.VIAJES) {
+            LaunchedEffect(Unit) {
+                viajeViewModel.recargarViajes()
+            }
             ViajesScreen(
                 viewModel = viajeViewModel,
                 onNuevoViaje = { navController.navigate(Rutas.CREAR_VIAJE) },
                 onViajeClick = { idViaje ->
                     navController.navigate("detalle_viaje/$idViaje")
-                }
+                },
+                onAjustes = { navController.navigate(Rutas.SETTINGS) }
             )
         }
 
@@ -140,6 +150,13 @@ fun NavGraph(
                 idViaje = idViaje,
                 viewModel = actividadViewModel,
                 onActividadCreada = { navController.popBackStack() },
+                onVolver = { navController.popBackStack() }
+            )
+        }
+
+        composable(Rutas.SETTINGS) {
+            SettingsScreen(
+                settingsViewModel = settingsViewModel,
                 onVolver = { navController.popBackStack() }
             )
         }

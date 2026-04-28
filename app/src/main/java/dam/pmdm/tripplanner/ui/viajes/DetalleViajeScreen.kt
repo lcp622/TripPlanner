@@ -21,6 +21,7 @@ import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.platform.LocalLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,7 +33,7 @@ fun DetalleViajeScreen(
 ) {
     var tabSeleccionada by remember { mutableIntStateOf(0) }
     val tabs = listOf("Itinerario", "Gastos", "Rutas")
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
 
     LaunchedEffect(viaje.idViaje) {
         actividadViewModel.cargarActividades(viaje.idViaje)
@@ -45,12 +46,13 @@ fun DetalleViajeScreen(
     }
 
     Scaffold(
-        containerColor = TripBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             // Hero header con gradiente
             Box(
@@ -109,7 +111,6 @@ fun DetalleViajeScreen(
                     )
                 }
 
-                // Badge estado
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -134,7 +135,9 @@ fun DetalleViajeScreen(
                     .offset(y = (-20).dp),
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             ) {
                 Row(
                     modifier = Modifier
@@ -152,14 +155,14 @@ fun DetalleViajeScreen(
                         Text(
                             text = "Presupuesto",
                             fontSize = 11.sp,
-                            color = TripTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Divider(
+                    HorizontalDivider(
                         modifier = Modifier
                             .height(40.dp)
                             .width(1.dp),
-                        color = TripGrayLight
+                        color = MaterialTheme.colorScheme.surfaceVariant
                     )
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         val dias = ((viaje.fechaFin - viaje.fechaInicio) / (1000 * 60 * 60 * 24)).toInt()
@@ -172,7 +175,7 @@ fun DetalleViajeScreen(
                         Text(
                             text = "Duración",
                             fontSize = 11.sp,
-                            color = TripTextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -181,7 +184,7 @@ fun DetalleViajeScreen(
             // Pestañas
             TabRow(
                 selectedTabIndex = tabSeleccionada,
-                containerColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = TripBlue
             ) {
                 tabs.forEachIndexed { index, titulo ->
@@ -191,6 +194,7 @@ fun DetalleViajeScreen(
                         text = {
                             Text(
                                 titulo,
+                                color = if (tabSeleccionada == index) TripBlue else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = if (tabSeleccionada == index) FontWeight.Bold else FontWeight.Normal
                             )
                         }
@@ -207,18 +211,26 @@ fun DetalleViajeScreen(
                 1 -> Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Módulo de gastos — próximamente", color = TripTextSecondary)
+                    Text(
+                        "Módulo de gastos — próximamente",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 2 -> Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Módulo de rutas — próximamente", color = TripTextSecondary)
+                    Text(
+                        "Módulo de rutas — próximamente",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

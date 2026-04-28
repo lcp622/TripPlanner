@@ -34,6 +34,11 @@ class ViajeViewModel(private val repository: FirestoreViajeRepository) : ViewMod
         }
     }
 
+    fun recargarViajes() {
+        _uiState.value = ViajeUiState.Loading
+        cargarViajes()
+    }
+
     fun crearViaje(
         nombre: String,
         paisDestino: String,

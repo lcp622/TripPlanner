@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,7 +31,8 @@ import androidx.compose.ui.platform.LocalLocale
 fun ViajesScreen(
     viewModel: ViajeViewModel,
     onNuevoViaje: () -> Unit,
-    onViajeClick: (String) -> Unit
+    onViajeClick: (String) -> Unit,
+    onAjustes: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -42,7 +44,8 @@ fun ViajesScreen(
                         Text(
                             text = "Mis Viajes",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp
+                            fontSize = 22.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = when (val s = uiState) {
@@ -59,19 +62,26 @@ fun ViajesScreen(
                         onClick = onNuevoViaje,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = TripBlue),
-                        modifier = Modifier.padding(end = 8.dp)
+                        modifier = Modifier.padding(end = 4.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Nuevo", fontSize = 13.sp)
                     }
+                    IconButton(onClick = onAjustes) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Ajustes",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = TripBackground
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
-        containerColor = TripBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
@@ -80,7 +90,17 @@ fun ViajesScreen(
         ) {
             when (val state = uiState) {
                 is ViajeUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = TripBlue)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Cargando viajes...",
+                            color = TripTextSecondary
+                        )
+                    }
                 }
                 is ViajeUiState.Error -> {
                     Text(
@@ -100,7 +120,8 @@ fun ViajesScreen(
                             Text(
                                 text = "No tienes viajes aún",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -184,7 +205,6 @@ fun ViajeCard(
                 }
             }
 
-            // Badge de estado
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -202,17 +222,16 @@ fun ViajeCard(
             }
         }
 
-        // Info inferior
         Column(
             modifier = Modifier
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
             viaje.descripcion?.let {
                 Text(
                     text = it,
                     fontSize = 13.sp,
-                    color = TripTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -232,13 +251,13 @@ fun ViajeCard(
                     Text(
                         text = dateFormat.format(Date(viaje.fechaInicio)),
                         fontSize = 12.sp,
-                        color = TripTextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Text(
                     text = "€${viaje.presupuestoTotal}",
                     fontSize = 12.sp,
-                    color = TripTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium
                 )
             }

@@ -34,7 +34,7 @@ fun ItinerarioScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(TripBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         when (val state = uiState) {
             is ActividadUiState.Loading -> {
@@ -131,7 +131,7 @@ fun ActividadCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
