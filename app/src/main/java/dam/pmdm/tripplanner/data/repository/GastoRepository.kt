@@ -41,4 +41,30 @@ class GastoRepository(private val gastoDao: GastoDao) {
         coleccionGastos(gasto.idViaje).document(gasto.idGasto).set(gasto).await()
         gastoDao.actualizar(gasto)
     }
+
+    fun obtenerTodosLosGastos(idViajes: List<String>): Flow<List<GastoEntity>> = callbackFlow {
+        if (idViajes.isEmpty()) {
+            trySend(emptyList())
+            awaitClose {}
+            return@callbackFlow
+        }
+
+        val listener = db.collection("viajes")
+            .whereIn("idViaje", idViajes)
+            .addSnapshotListener { _, _ -> }
+
+        // Obtenemos los gastos de cada viaje
+        val listeners = idViajes.map { idViaje ->
+            coleccionGastos(idViaje).addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                val gastos = snapshot?.documents?.mapNotNull { it.toObject(GastoEntity::class.java) } ?: emptyList()
+                trySend(gastos)
+            }
+        }
+
+        awaitClose {
+            listener.remove()
+            listeners.forEach { it.remove() }
+        }
+    }
 }
