@@ -27,25 +27,21 @@ import dam.pmdm.tripplanner.ui.auth.RegisterScreen
 import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModel
 import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModelFactory
 import dam.pmdm.tripplanner.ui.itinerario.CrearActividadScreen
-import dam.pmdm.tripplanner.ui.perfil.SettingsScreen
 import dam.pmdm.tripplanner.ui.viajes.CrearViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.DetalleViajeScreen
+import dam.pmdm.tripplanner.ui.viajes.EditarViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModel
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModelFactory
-import dam.pmdm.tripplanner.ui.viajes.ViajesScreen
-import dam.pmdm.tripplanner.ui.viajes.EditarViajeScreen
 import kotlinx.coroutines.launch
 
 object Rutas {
     const val LOGIN = "login"
     const val REGISTER = "register"
-    const val VIAJES = "viajes"
+    const val MAIN = "main"
     const val CREAR_VIAJE = "crear_viaje"
     const val DETALLE_VIAJE = "detalle_viaje/{idViaje}"
-    const val CREAR_ACTIVIDAD = "crear_actividad/{idViaje}"
-    const val SETTINGS = "settings"
-
     const val EDITAR_VIAJE = "editar_viaje/{idViaje}"
+    const val CREAR_ACTIVIDAD = "crear_actividad/{idViaje}"
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -79,17 +75,14 @@ fun NavGraph(
         }
     }
 
-    val startDestination = if (authViewModel.estaAutenticado) Rutas.VIAJES else Rutas.LOGIN
+    val startDestination = if (authViewModel.estaAutenticado) Rutas.MAIN else Rutas.LOGIN
 
-    NavHost(
-        navController = navController,
-        startDestination = startDestination
-    )  {
+    NavHost(navController = navController, startDestination = startDestination) {
 
         composable(Rutas.LOGIN) {
             LoginScreen(
                 onLoginExitoso = {
-                    navController.navigate(Rutas.VIAJES) {
+                    navController.navigate(Rutas.MAIN) {
                         popUpTo(Rutas.LOGIN) { inclusive = true }
                     }
                 },
@@ -100,7 +93,7 @@ fun NavGraph(
         composable(Rutas.REGISTER) {
             RegisterScreen(
                 onRegistroExitoso = {
-                    navController.navigate(Rutas.VIAJES) {
+                    navController.navigate(Rutas.MAIN) {
                         popUpTo(Rutas.LOGIN) { inclusive = true }
                     }
                 },
@@ -108,17 +101,20 @@ fun NavGraph(
             )
         }
 
-        composable(Rutas.VIAJES) {
-            LaunchedEffect(Unit) {
-                viajeViewModel.recargarViajes()
-            }
-            ViajesScreen(
-                viewModel = viajeViewModel,
+        composable(Rutas.MAIN) {
+            MainScreen(
+                settingsViewModel = settingsViewModel,
+                onCerrarSesion = {
+                    authViewModel.cerrarSesion()
+                    navController.navigate(Rutas.LOGIN) {
+                        popUpTo(Rutas.MAIN) { inclusive = true }
+                    }
+                },
                 onNuevoViaje = { navController.navigate(Rutas.CREAR_VIAJE) },
                 onViajeClick = { idViaje ->
                     navController.navigate("detalle_viaje/$idViaje")
                 },
-                onAjustes = { navController.navigate(Rutas.SETTINGS) }
+                onAjustes = {}
             )
         }
 
@@ -147,9 +143,7 @@ fun NavGraph(
                     onNuevaActividad = {
                         navController.navigate("crear_actividad/$idViaje")
                     },
-                    onViajeEliminado = {
-                        navController.popBackStack()
-                    },
+                    onViajeEliminado = { navController.popBackStack() },
                     onEditarViaje = {
                         navController.navigate("editar_viaje/$idViaje")
                     }
@@ -181,13 +175,6 @@ fun NavGraph(
                 idViaje = idViaje,
                 viewModel = actividadViewModel,
                 onActividadCreada = { navController.popBackStack() },
-                onVolver = { navController.popBackStack() }
-            )
-        }
-
-        composable(Rutas.SETTINGS) {
-            SettingsScreen(
-                settingsViewModel = settingsViewModel,
                 onVolver = { navController.popBackStack() }
             )
         }
