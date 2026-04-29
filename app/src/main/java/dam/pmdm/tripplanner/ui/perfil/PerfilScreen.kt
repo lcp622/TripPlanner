@@ -7,7 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -15,9 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import dam.pmdm.tripplanner.ui.SettingsViewModel
 import dam.pmdm.tripplanner.ui.theme.*
@@ -25,7 +27,8 @@ import dam.pmdm.tripplanner.ui.theme.*
 @Composable
 fun PerfilScreen(
     settingsViewModel: SettingsViewModel,
-    onCerrarSesion: () -> Unit
+    onCerrarSesion: () -> Unit,
+    onEditarPerfil: () -> Unit
 ) {
     val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
     val user = FirebaseAuth.getInstance().currentUser
@@ -72,12 +75,21 @@ fun PerfilScreen(
                 .background(TripBlue.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = null,
-                tint = TripBlue,
-                modifier = Modifier.size(48.dp)
-            )
+            if (user?.photoUrl != null) {
+                AsyncImage(
+                    model = user.photoUrl.toString(),
+                    contentDescription = "Foto de perfil",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = null,
+                    tint = TripBlue,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -94,9 +106,26 @@ fun PerfilScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Sección ajustes
+        // Botón editar perfil
+        Button(
+            onClick = onEditarPerfil,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = TripBlue),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Editar perfil", fontWeight = FontWeight.Medium)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
             text = "AJUSTES",
             fontSize = 12.sp,
@@ -153,9 +182,8 @@ fun PerfilScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Botón cerrar sesión
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

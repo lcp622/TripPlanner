@@ -13,6 +13,7 @@ sealed class AuthUiState {
     object Loading : AuthUiState()
     object Success : AuthUiState()
     data class Error(val mensaje: String) : AuthUiState()
+
 }
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
@@ -49,7 +50,24 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val _perfilState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
+    val perfilState: StateFlow<AuthUiState> = _perfilState
 
+    fun actualizarPerfil(nombre: String, fotoUrl: String?) {
+        viewModelScope.launch {
+            _perfilState.value = AuthUiState.Loading
+            val resultado = repository.actualizarPerfil(nombre, fotoUrl)
+            _perfilState.value = if (resultado.isSuccess) {
+                AuthUiState.Success
+            } else {
+                AuthUiState.Error(resultado.exceptionOrNull()?.message ?: "Error desconocido")
+            }
+        }
+    }
+
+    fun resetPerfilState() {
+        _perfilState.value = AuthUiState.Idle
+    }
 
     fun cerrarSesion() {
         repository.cerrarSesion()

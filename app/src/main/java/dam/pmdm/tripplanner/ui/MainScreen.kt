@@ -8,11 +8,8 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import dam.pmdm.tripplanner.ui.perfil.PerfilScreen
 import dam.pmdm.tripplanner.ui.theme.TripBlue
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModel
@@ -34,7 +31,8 @@ fun MainScreen(
     settingsViewModel: SettingsViewModel,
     onCerrarSesion: () -> Unit,
     onNuevoViaje: () -> Unit,
-    onViajeClick: (String) -> Unit
+    onViajeClick: (String) -> Unit,
+    onEditarPerfil: () -> Unit
 ) {
     val items = listOf(
         BottomNavItem("Viajes", Icons.Default.Map, "viajes"),
@@ -87,7 +85,8 @@ fun MainScreen(
             2 -> GastosScreen()
             3 -> PerfilScreen(
                 settingsViewModel = settingsViewModel,
-                onCerrarSesion = onCerrarSesion
+                onCerrarSesion = onCerrarSesion,
+                onEditarPerfil = onEditarPerfil
             )
         }
     }

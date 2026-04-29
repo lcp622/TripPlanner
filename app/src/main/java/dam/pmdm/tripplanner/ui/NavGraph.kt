@@ -52,6 +52,9 @@ object Rutas {
     const val EDITAR_ACTIVIDAD = "editar_actividad/{idViaje}/{idActividad}"
 
     const val EDITAR_GASTO = "editar_gasto/{idViaje}/{idGasto}"
+
+    const val EDITAR_PERFIL = "editar_perfil"
+
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -60,7 +63,7 @@ fun NavGraph(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = viewModel(),
     settingsViewModel: SettingsViewModel
-) {
+){
     val context = LocalContext.current
     val db = TripPlannerDatabase.getInstance(context)
     val scope = rememberCoroutineScope()
@@ -126,7 +129,8 @@ fun NavGraph(
                 onNuevoViaje = { navController.navigate(Rutas.CREAR_VIAJE) },
                 onViajeClick = { idViaje ->
                     navController.navigate("detalle_viaje/$idViaje")
-                }
+                },
+                onEditarPerfil = { navController.navigate(Rutas.EDITAR_PERFIL) }
             )
         }
 
@@ -246,6 +250,13 @@ fun NavGraph(
                     onVolver = { navController.popBackStack() }
                 )
             }
+        }
+
+        composable(Rutas.EDITAR_PERFIL) {
+            dam.pmdm.tripplanner.ui.perfil.EditarPerfilScreen(
+                authViewModel = authViewModel,
+                onVolver = { navController.popBackStack() }
+            )
         }
     }
 }

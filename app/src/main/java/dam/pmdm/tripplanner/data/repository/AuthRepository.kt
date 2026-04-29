@@ -57,4 +57,32 @@ class AuthRepository(private val context: Context) {
         )
         db.usuarioDao().insertar(usuario)
     }
+
+    suspend fun actualizarPerfil(nombre: String, fotoUrl: String?): Result<Unit> {
+        return try {
+            val user = auth.currentUser ?: return Result.failure(Exception("No hay usuario"))
+            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                .setDisplayName(nombre)
+                .apply {
+                    if (fotoUrl != null) {
+                        photoUri = android.net.Uri.parse(fotoUrl)
+                    }
+                }
+                .build()
+            user.updateProfile(profileUpdates).await()
+
+            // Actualizar en Firestore
+            val db = TripPlannerDatabase.getInstance(context)
+            val usuario = db.usuarioDao().obtenerPorId(user.uid)
+            if (usuario != null) {
+                db.usuarioDao().actualizar(usuario.copy(
+                    nombre = nombre,
+                    fotoUrl = fotoUrl
+                ))
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
