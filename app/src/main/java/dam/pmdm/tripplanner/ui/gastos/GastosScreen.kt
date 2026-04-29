@@ -1,20 +1,23 @@
 package dam.pmdm.tripplanner.ui.gastos
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
@@ -22,6 +25,9 @@ import dam.pmdm.tripplanner.data.local.entity.GastoEntity
 import dam.pmdm.tripplanner.data.repository.GastoRepository
 import dam.pmdm.tripplanner.ui.theme.*
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.*
+import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun GastosScreen() {
@@ -31,20 +37,23 @@ fun GastosScreen() {
     val viewModel: GastoViewModel = viewModel(factory = GastoViewModelFactory(gastoRepository))
 
     var todosGastos by remember { mutableStateOf<List<GastoEntity>>(emptyList()) }
+    var nombresViajes by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         val user = FirebaseAuth.getInstance().currentUser ?: return@LaunchedEffect
         val firestore = FirebaseFirestore.getInstance()
 
-        // Obtener IDs de viajes del usuario
         val viajesSnapshot = firestore.collection("viajes")
             .whereEqualTo("idPropietario", user.uid)
             .get().await()
 
         val idViajes = viajesSnapshot.documents.map { it.id }
+        val nombres = viajesSnapshot.documents.associate {
+            it.id to (it.getString("nombre") ?: "Viaje")
+        }
+        nombresViajes = nombres
 
-        // Obtener gastos de cada viaje
         val gastos = mutableListOf<GastoEntity>()
         idViajes.forEach { idViaje ->
             val gastosSnapshot = firestore.collection("viajes")
@@ -89,7 +98,6 @@ fun GastosScreen() {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Header
                 item {
                     Text(
                         text = "Mis Gastos",
@@ -133,6 +141,17 @@ fun GastosScreen() {
                                 fontSize = 12.sp
                             )
                         }
+                    }
+                }
+
+                // Gráfico circular
+                if (gastosPorCategoria.isNotEmpty() && totalGastado > 0) {
+                    item {
+                        GraficoPorCategoria(
+                            gastosPorCategoria = gastosPorCategoria,
+                            totalGastado = totalGastado,
+                            categoriaColores = categoriaColores
+                        )
                     }
                 }
 
@@ -183,18 +202,11 @@ fun GastosScreen() {
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = "€${String.format("%.2f", importe)}",
-                                            fontWeight = FontWeight.Bold,
-                                            color = color
-                                        )
-                                        Text(
-                                            text = "$porcentaje%",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    Text(
+                                        text = "€${String.format("%.2f", importe)}",
+                                        fontWeight = FontWeight.Bold,
+                                        color = color
+                                    )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 LinearProgressIndicator(
@@ -224,10 +236,9 @@ fun GastosScreen() {
                     }
 
                     items(todosGastos.take(10)) { gasto ->
-                        GastoCard(
+                        GastoResumenCard(
                             gasto = gasto,
-                            onEliminar = {},
-                            onEditar = {}
+                            nombreViaje = nombresViajes[gasto.idViaje] ?: "Viaje"
                         )
                     }
                 }
@@ -257,6 +268,165 @@ fun GastosScreen() {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun GraficoPorCategoria(
+    gastosPorCategoria: Map<String, Double>,
+    totalGastado: Double,
+    categoriaColores: Map<String, Color>
+) {
+    val angulos = gastosPorCategoria.entries.map { (categoria, importe) ->
+        categoria to (importe / totalGastado * 360f).toFloat()
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Distribución de gastos",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Canvas(modifier = Modifier.size(180.dp)) {
+                var startAngle = -90f
+                angulos.forEach { (categoria, angulo) ->
+                    val color = categoriaColores[categoria] ?: Color.Gray
+                    drawArc(
+                        color = color,
+                        startAngle = startAngle,
+                        sweepAngle = angulo,
+                        useCenter = true,
+                        size = Size(size.width, size.height)
+                    )
+                    startAngle += angulo
+                }
+                drawCircle(
+                    color = Color.White,
+                    radius = size.minDimension / 3.5f
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                gastosPorCategoria.entries.sortedByDescending { it.value }.forEach { (categoria, importe) ->
+                    val color = categoriaColores[categoria] ?: Color.Gray
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .background(color, CircleShape)
+                        )
+                        Text(
+                            text = when (categoria) {
+                                "ALOJAMIENTO" -> "🏨"
+                                "TRANSPORTE" -> "✈️"
+                                "COMIDA" -> "🍽️"
+                                "OCIO" -> "🎭"
+                                else -> "💳"
+                            },
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = categoria,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "€${String.format("%.2f", importe)}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = color
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GastoResumenCard(gasto: GastoEntity, nombreViaje: String = "")  {
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
+    val categoriaColor = when (gasto.categoria) {
+        "ALOJAMIENTO" -> Color(0xFF9C27B0)
+        "TRANSPORTE" -> Color(0xFF2196F3)
+        "COMIDA" -> Color(0xFF4CAF50)
+        "OCIO" -> Color(0xFFFF9800)
+        else -> Color(0xFF9E9E9E)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(categoriaColor.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = when (gasto.categoria) {
+                        "ALOJAMIENTO" -> "🏨"
+                        "TRANSPORTE" -> "✈️"
+                        "COMIDA" -> "🍽️"
+                        "OCIO" -> "🎭"
+                        else -> "💳"
+                    },
+                    fontSize = 20.sp
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = gasto.concepto,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = dateFormat.format(Date(gasto.fecha)),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (nombreViaje.isNotEmpty()) {
+                    Text(
+                        text = "✈️ $nombreViaje",
+                        fontSize = 11.sp,
+                        color = TripBlue.copy(alpha = 0.8f)
+                    )
+                }
+            }
+            Text(
+                text = "€${String.format("%.2f", gasto.importe)}",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = TripBlue
+            )
         }
     }
 }

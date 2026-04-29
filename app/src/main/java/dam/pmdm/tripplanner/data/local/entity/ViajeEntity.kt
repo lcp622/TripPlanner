@@ -18,5 +18,6 @@ data class ViajeEntity(
     val descripcion: String? = null,
     val presupuestoTotal: Double = 0.0,
     val estado: String = "PLANIFICADO",
-    val idPropietario: String = ""
+    val idPropietario: String = "",
+    val participantesIds: List<String> = emptyList()
 )

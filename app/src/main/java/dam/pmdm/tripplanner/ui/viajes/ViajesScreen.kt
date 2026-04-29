@@ -206,7 +206,12 @@ fun ViajeCard(
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = viaje.estado,
+                    text = when (viaje.estado) {
+                        "PLANIFICADO" -> "Planificado"
+                        "EN_CURSO" -> "En curso"
+                        "FINALIZADO" -> "Finalizado"
+                        else -> viaje.estado
+                    },
                     fontSize = 11.sp,
                     color = Color.White,
                     fontWeight = FontWeight.Medium

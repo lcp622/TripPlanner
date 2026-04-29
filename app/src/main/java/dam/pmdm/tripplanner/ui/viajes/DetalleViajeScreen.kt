@@ -23,6 +23,7 @@ import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModel
 import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
 import dam.pmdm.tripplanner.ui.gastos.GastoViewModel
 import dam.pmdm.tripplanner.ui.gastos.GastosViajeScreen
+import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -35,6 +36,7 @@ fun DetalleViajeScreen(
     actividadViewModel: ActividadViewModel,
     viajeViewModel: ViajeViewModel,
     gastoViewModel: GastoViewModel,
+    viajeRepository: FirestoreViajeRepository,
     onVolver: () -> Unit,
     onNuevaActividad: () -> Unit,
     onEditarActividad: (String) -> Unit,
@@ -42,9 +44,9 @@ fun DetalleViajeScreen(
     onEditarGasto: (String) -> Unit,
     onViajeEliminado: () -> Unit,
     onEditarViaje: () -> Unit
-) {
+){
     var tabSeleccionada by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Itinerario", "Gastos", "Rutas")
+    val tabs = listOf("Itinerario", "Gastos", "Participantes", "Rutas")
     val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
     var mostrarDialogoBorrar by remember { mutableStateOf(false) }
 
@@ -162,7 +164,12 @@ fun DetalleViajeScreen(
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = viaje.estado,
+                        text = when (viaje.estado) {
+                            "PLANIFICADO" -> "Planificado"
+                            "EN_CURSO" -> "En curso"
+                            "FINALIZADO" -> "Finalizado"
+                            else -> viaje.estado
+                        },
                         fontSize = 11.sp,
                         color = Color.White,
                         fontWeight = FontWeight.Medium
@@ -248,14 +255,21 @@ fun DetalleViajeScreen(
                     onNuevoGasto = onNuevoGasto,
                     onEditarGasto = onEditarGasto
                 )
-                2 -> Box(
+                2 -> ParticipantesScreen(
+                    idViaje = viaje.idViaje,
+                    repository = viajeRepository
+                )
+                3 -> Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Módulo de rutas — próximamente", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "Módulo de rutas — próximamente",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

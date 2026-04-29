@@ -21,6 +21,7 @@ val TripTextPrimary = Color(0xFF212121)
 val TripTextSecondary = Color(0xFF757575)
 
 // Estados viaje
-val ColorPlanificado = Color(0xFF2196F3)
-val ColorEnCurso = Color(0xFF4CAF50)
-val ColorFinalizado = Color(0xFF9E9E9E)
+// Estados viaje
+val ColorPlanificado = Color(0xFF2196F3)  // Azul
+val ColorEnCurso = Color(0xFFFF9800)      // Naranja/Amarillo
+val ColorFinalizado = Color(0xFFE53935)   // Rojo

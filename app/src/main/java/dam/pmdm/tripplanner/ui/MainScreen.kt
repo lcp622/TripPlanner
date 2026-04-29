@@ -75,19 +75,24 @@ fun MainScreen(
             }
         }
     ) { padding ->
-        when (selectedItem) {
-            0 -> ViajesScreen(
-                viewModel = viajeViewModel,
-                onNuevoViaje = onNuevoViaje,
-                onViajeClick = onViajeClick,
-            )
-            1 -> ExplorarScreen()
-            2 -> GastosScreen()
-            3 -> PerfilScreen(
-                settingsViewModel = settingsViewModel,
-                onCerrarSesion = onCerrarSesion,
-                onEditarPerfil = onEditarPerfil
-            )
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.padding(padding)
+        ) {
+            when (selectedItem) {
+                0 -> ViajesScreen(
+                    viewModel = viajeViewModel,
+                    onNuevoViaje = onNuevoViaje,
+                    onViajeClick = onViajeClick,
+                )
+
+                1 -> ExplorarScreen()
+                2 -> GastosScreen()
+                3 -> PerfilScreen(
+                    settingsViewModel = settingsViewModel,
+                    onCerrarSesion = onCerrarSesion,
+                    onEditarPerfil = onEditarPerfil
+                )
+            }
         }
     }
 }

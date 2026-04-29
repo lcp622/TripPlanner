@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseUser
 import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
 import dam.pmdm.tripplanner.data.local.entity.UsuarioEntity
 import kotlinx.coroutines.tasks.await
+import com.google.firebase.firestore.FirebaseFirestore
 
 class AuthRepository(private val context: Context) {
 
@@ -56,6 +57,18 @@ class AuthRepository(private val context: Context) {
             email = user.email ?: ""
         )
         db.usuarioDao().insertar(usuario)
+
+        // Guardar también en Firestore para poder buscar por email
+        val firestore = FirebaseFirestore.getInstance()
+        val usuarioMap = mapOf(
+            "idUsuario" to user.uid,
+            "nombre" to (user.displayName ?: user.email ?: "Usuario"),
+            "email" to (user.email ?: "")
+        )
+        firestore.collection("usuarios")
+            .document(user.uid)
+            .set(usuarioMap)
+            .await()
     }
 
     suspend fun actualizarPerfil(nombre: String, fotoUrl: String?): Result<Unit> {

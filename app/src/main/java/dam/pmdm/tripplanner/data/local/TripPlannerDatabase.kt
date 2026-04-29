@@ -4,8 +4,22 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
 import dam.pmdm.tripplanner.data.local.dao.*
 import dam.pmdm.tripplanner.data.local.entity.*
+
+class Converters {
+    @TypeConverter
+    fun fromString(value: String?): List<String> {
+        return value?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
+    }
+
+    @TypeConverter
+    fun fromList(list: List<String>?): String {
+        return list?.joinToString(",") ?: ""
+    }
+}
 
 @Database(
     entities = [
@@ -18,9 +32,10 @@ import dam.pmdm.tripplanner.data.local.entity.*
         RutaEntity::class,
         PuntoInteresEntity::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
+@TypeConverters(Converters::class)
 abstract class TripPlannerDatabase : RoomDatabase() {
 
     abstract fun usuarioDao(): UsuarioDao

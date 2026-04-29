@@ -20,18 +20,57 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
     private val coleccionViajes
         get() = db.collection("viajes")
 
-    // Sincronizar viajes desde Firestore a Room en tiempo real
     fun sincronizarViajes(): Flow<List<ViajeEntity>> = callbackFlow {
-        val listener = coleccionViajes
+        val ahora = System.currentTimeMillis()
+        var viajesPropios = listOf<ViajeEntity>()
+        var viajesParticipante = listOf<ViajeEntity>()
+
+        fun emitirCombinados() {
+            val todos = (viajesPropios + viajesParticipante)
+                .distinctBy { it.idViaje }
+            trySend(todos)
+        }
+
+        // Viajes propios
+        val listenerPropios = coleccionViajes
             .whereEqualTo("idPropietario", idUsuario)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
-                val viajes = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(ViajeEntity::class.java)
+                viajesPropios = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(ViajeEntity::class.java)?.let { viaje ->
+                        val estado = when {
+                            ahora < viaje.fechaInicio -> "PLANIFICADO"
+                            ahora > viaje.fechaFin -> "FINALIZADO"
+                            else -> "EN_CURSO"
+                        }
+                        viaje.copy(estado = estado)
+                    }
                 } ?: emptyList()
-                trySend(viajes)
+                emitirCombinados()
             }
-        awaitClose { listener.remove() }
+
+        // Viajes donde es participante
+        val listenerParticipante = coleccionViajes
+            .whereArrayContains("participantesIds", idUsuario)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                viajesParticipante = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(ViajeEntity::class.java)?.let { viaje ->
+                        val estado = when {
+                            ahora < viaje.fechaInicio -> "PLANIFICADO"
+                            ahora > viaje.fechaFin -> "FINALIZADO"
+                            else -> "EN_CURSO"
+                        }
+                        viaje.copy(estado = estado)
+                    }
+                } ?: emptyList()
+                emitirCombinados()
+            }
+
+        awaitClose {
+            listenerPropios.remove()
+            listenerParticipante.remove()
+        }
     }
 
     // Guardar viaje en Firestore y Room
@@ -59,9 +98,65 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
     suspend fun obtenerViajePorIdFirestore(idViaje: String): ViajeEntity? {
         return try {
             val doc = coleccionViajes.document(idViaje).get().await()
-            doc.toObject(ViajeEntity::class.java)
+            val ahora = System.currentTimeMillis()
+            doc.toObject(ViajeEntity::class.java)?.let { viaje ->
+                val estado = when {
+                    ahora < viaje.fechaInicio -> "PLANIFICADO"
+                    ahora > viaje.fechaFin -> "FINALIZADO"
+                    else -> "EN_CURSO"
+                }
+                viaje.copy(estado = estado)
+            }
         } catch (e: Exception) {
             viajeDao.obtenerPorId(idViaje)
         }
+    }
+
+    suspend fun añadirParticipante(idViaje: String, email: String): Result<Unit> {
+        return try {
+            val usuarioSnapshot = db.collection("usuarios")
+                .whereEqualTo("email", email)
+                .get().await()
+
+            if (usuarioSnapshot.isEmpty) {
+                return Result.failure(Exception("No se encontró ningún usuario con ese email"))
+            }
+
+            val idUsuario = usuarioSnapshot.documents.first().id
+            val nombreUsuario = usuarioSnapshot.documents.first().getString("nombre") ?: email
+
+            val participante = mapOf(
+                "idUsuario" to idUsuario,
+                "nombre" to nombreUsuario,
+                "email" to email,
+                "esAdmin" to false,
+                "fechaUnion" to System.currentTimeMillis()
+            )
+
+            db.collection("viajes").document(idViaje)
+                .collection("participantes")
+                .document(idUsuario)
+                .set(participante).await()
+
+            // Añadir idUsuario al array participantesIds del viaje
+            db.collection("viajes").document(idViaje)
+                .update("participantesIds", com.google.firebase.firestore.FieldValue.arrayUnion(idUsuario))
+                .await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun obtenerParticipantes(idViaje: String): Flow<List<Map<String, Any>>> = callbackFlow {
+        val listener = db.collection("viajes").document(idViaje)
+            .collection("participantes")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                val participantes = snapshot?.documents?.mapNotNull { it.data } ?: emptyList()
+                trySend(participantes)
+            }
+        awaitClose { listener.remove() }
     }
 }

@@ -156,6 +156,7 @@ fun NavGraph(
                     actividadViewModel = actividadViewModel,
                     viajeViewModel = viajeViewModel,
                     gastoViewModel = gastoViewModel,
+                    viajeRepository = viajeRepository,
                     onVolver = { navController.popBackStack() },
                     onNuevaActividad = {
                         navController.navigate("crear_actividad/$idViaje")
