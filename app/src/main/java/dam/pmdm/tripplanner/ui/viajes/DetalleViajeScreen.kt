@@ -46,7 +46,7 @@ fun DetalleViajeScreen(
     onEditarViaje: () -> Unit
 ){
     var tabSeleccionada by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Itinerario", "Gastos", "Participantes", "Rutas")
+    val tabs = listOf("Itinerario", "Gastos", "Viajeros", "Rutas")
     val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
     var mostrarDialogoBorrar by remember { mutableStateOf(false) }
 
