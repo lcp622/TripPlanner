@@ -31,8 +31,7 @@ import androidx.compose.ui.platform.LocalLocale
 fun ViajesScreen(
     viewModel: ViajeViewModel,
     onNuevoViaje: () -> Unit,
-    onViajeClick: (String) -> Unit,
-    onAjustes: () -> Unit
+    onViajeClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -67,13 +66,6 @@ fun ViajesScreen(
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Nuevo", fontSize = 13.sp)
-                    }
-                    IconButton(onClick = onAjustes) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = "Ajustes",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

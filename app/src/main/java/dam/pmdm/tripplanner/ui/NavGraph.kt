@@ -113,8 +113,7 @@ fun NavGraph(
                 onNuevoViaje = { navController.navigate(Rutas.CREAR_VIAJE) },
                 onViajeClick = { idViaje ->
                     navController.navigate("detalle_viaje/$idViaje")
-                },
-                onAjustes = {}
+                }
             )
         }
 

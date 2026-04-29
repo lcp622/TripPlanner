@@ -34,8 +34,7 @@ fun MainScreen(
     settingsViewModel: SettingsViewModel,
     onCerrarSesion: () -> Unit,
     onNuevoViaje: () -> Unit,
-    onViajeClick: (String) -> Unit,
-    onAjustes: () -> Unit
+    onViajeClick: (String) -> Unit
 ) {
     val items = listOf(
         BottomNavItem("Viajes", Icons.Default.Map, "viajes"),
@@ -83,7 +82,6 @@ fun MainScreen(
                 viewModel = viajeViewModel,
                 onNuevoViaje = onNuevoViaje,
                 onViajeClick = onViajeClick,
-                onAjustes = { selectedItem = 3 }
             )
             1 -> ExplorarScreen()
             2 -> GastosScreen()
