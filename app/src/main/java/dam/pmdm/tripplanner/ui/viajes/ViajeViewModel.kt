@@ -64,6 +64,12 @@ class ViajeViewModel(private val repository: FirestoreViajeRepository) : ViewMod
         }
     }
 
+    fun actualizarViaje(viaje: ViajeEntity) {
+        viewModelScope.launch {
+            repository.actualizarViaje(viaje)
+        }
+    }
+
     fun eliminarViaje(idViaje: String) {
         viewModelScope.launch {
             repository.eliminarViaje(idViaje)

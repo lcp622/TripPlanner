@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,18 +23,23 @@ import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.platform.LocalLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleViajeScreen(
     viaje: ViajeEntity,
     actividadViewModel: ActividadViewModel,
+    viajeViewModel: ViajeViewModel,
     onVolver: () -> Unit,
-    onNuevaActividad: () -> Unit
+    onNuevaActividad: () -> Unit,
+    onViajeEliminado: () -> Unit,
+    onEditarViaje: () -> Unit
 ) {
     var tabSeleccionada by remember { mutableIntStateOf(0) }
     val tabs = listOf("Itinerario", "Gastos", "Rutas")
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
+    var mostrarDialogoBorrar by remember { mutableStateOf(false) }
 
     LaunchedEffect(viaje.idViaje) {
         actividadViewModel.cargarActividades(viaje.idViaje)
@@ -44,6 +51,35 @@ fun DetalleViajeScreen(
         else -> ColorFinalizado
     }
 
+    if (mostrarDialogoBorrar) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoBorrar = false },
+            title = {
+                Text("Eliminar viaje", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text("¿Estás segura de que quieres eliminar \"${viaje.nombre}\"? Esta acción no se puede deshacer.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viajeViewModel.eliminarViaje(viaje.idViaje)
+                        mostrarDialogoBorrar = false
+                        onViajeEliminado()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogoBorrar = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
@@ -53,34 +89,35 @@ fun DetalleViajeScreen(
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Hero header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
                     .background(
-                        Brush.verticalGradient(
-                            colors = listOf(TripTeal, TripBlue)
-                        )
+                        Brush.verticalGradient(colors = listOf(TripTeal, TripBlue))
                     )
             ) {
                 IconButton(
                     onClick = onVolver,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .align(Alignment.TopStart)
+                    modifier = Modifier.padding(8.dp).align(Alignment.TopStart)
                 ) {
-                    Icon(
-                        Icons.Default.ArrowBack,
-                        contentDescription = "Volver",
-                        tint = Color.White
-                    )
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                }
+
+                // Botones editar y borrar
+                Row(
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+                ) {
+                    IconButton(onClick = onEditarViaje) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar viaje", tint = Color.White)
+                    }
+                    IconButton(onClick = { mostrarDialogoBorrar = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Eliminar viaje", tint = Color.White)
+                    }
                 }
 
                 Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(16.dp)
+                    modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)
                 ) {
                     Text(
                         text = viaje.nombre,
@@ -112,7 +149,7 @@ fun DetalleViajeScreen(
 
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
+                        .align(Alignment.BottomEnd)
                         .padding(16.dp)
                         .background(estadoColor, RoundedCornerShape(8.dp))
                         .padding(horizontal = 10.dp, vertical = 4.dp)
@@ -126,21 +163,16 @@ fun DetalleViajeScreen(
                 }
             }
 
-            // Info card sin offset
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(4.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -157,9 +189,7 @@ fun DetalleViajeScreen(
                         )
                     }
                     HorizontalDivider(
-                        modifier = Modifier
-                            .height(40.dp)
-                            .width(1.dp),
+                        modifier = Modifier.height(40.dp).width(1.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant
                     )
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -179,7 +209,6 @@ fun DetalleViajeScreen(
                 }
             }
 
-            // Pestañas
             TabRow(
                 selectedTabIndex = tabSeleccionada,
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -200,7 +229,6 @@ fun DetalleViajeScreen(
                 }
             }
 
-            // Contenido pestañas
             when (tabSeleccionada) {
                 0 -> ItinerarioScreen(
                     viewModel = actividadViewModel,
@@ -213,10 +241,7 @@ fun DetalleViajeScreen(
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "Módulo de gastos — próximamente",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text("Módulo de gastos — próximamente", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 2 -> Box(
                     modifier = Modifier
@@ -225,10 +250,7 @@ fun DetalleViajeScreen(
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "Módulo de rutas — próximamente",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text("Módulo de rutas — próximamente", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

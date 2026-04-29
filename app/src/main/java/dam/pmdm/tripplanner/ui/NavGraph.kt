@@ -33,6 +33,7 @@ import dam.pmdm.tripplanner.ui.viajes.DetalleViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModel
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModelFactory
 import dam.pmdm.tripplanner.ui.viajes.ViajesScreen
+import dam.pmdm.tripplanner.ui.viajes.EditarViajeScreen
 import kotlinx.coroutines.launch
 
 object Rutas {
@@ -43,6 +44,8 @@ object Rutas {
     const val DETALLE_VIAJE = "detalle_viaje/{idViaje}"
     const val CREAR_ACTIVIDAD = "crear_actividad/{idViaje}"
     const val SETTINGS = "settings"
+
+    const val EDITAR_VIAJE = "editar_viaje/{idViaje}"
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -139,10 +142,35 @@ fun NavGraph(
                 DetalleViajeScreen(
                     viaje = v,
                     actividadViewModel = actividadViewModel,
+                    viajeViewModel = viajeViewModel,
                     onVolver = { navController.popBackStack() },
                     onNuevaActividad = {
                         navController.navigate("crear_actividad/$idViaje")
+                    },
+                    onViajeEliminado = {
+                        navController.popBackStack()
+                    },
+                    onEditarViaje = {
+                        navController.navigate("editar_viaje/$idViaje")
                     }
+                )
+            }
+        }
+
+        composable(Rutas.EDITAR_VIAJE) { backStackEntry ->
+            val idViaje = backStackEntry.arguments?.getString("idViaje") ?: ""
+            var viaje by remember(idViaje) { mutableStateOf<ViajeEntity?>(null) }
+
+            LaunchedEffect(idViaje) {
+                viaje = viajeRepository.obtenerViajePorIdFirestore(idViaje)
+            }
+
+            viaje?.let { v ->
+                EditarViajeScreen(
+                    viaje = v,
+                    viewModel = viajeViewModel,
+                    onViajeActualizado = { navController.popBackStack() },
+                    onVolver = { navController.popBackStack() }
                 )
             }
         }
