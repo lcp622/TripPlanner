@@ -35,6 +35,12 @@ class ParticipantesViewModel(private val repository: FirestoreViajeRepository) :
     fun resetState() {
         _uiState.value = ParticipanteUiState.Idle
     }
+
+    fun eliminarParticipante(idViaje: String, idUsuario: String) {
+        viewModelScope.launch {
+            repository.eliminarParticipante(idViaje, idUsuario)
+        }
+    }
 }
 
 class ParticipantesViewModelFactory(

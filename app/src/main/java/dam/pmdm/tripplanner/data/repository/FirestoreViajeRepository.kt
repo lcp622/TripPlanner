@@ -159,4 +159,23 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
             }
         awaitClose { listener.remove() }
     }
+
+    suspend fun eliminarParticipante(idViaje: String, idUsuario: String): Result<Unit> {
+        return try {
+            // Eliminar de la subcolección participantes
+            db.collection("viajes").document(idViaje)
+                .collection("participantes")
+                .document(idUsuario)
+                .delete().await()
+
+            // Eliminar del array participantesIds
+            db.collection("viajes").document(idViaje)
+                .update("participantesIds", com.google.firebase.firestore.FieldValue.arrayRemove(idUsuario))
+                .await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

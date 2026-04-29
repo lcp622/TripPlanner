@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +36,7 @@ fun ParticipantesScreen(
     var mostrarDialogoAñadir by remember { mutableStateOf(false) }
     var emailNuevo by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
+    var participanteAEliminar by remember { mutableStateOf<Map<String, Any>?>(null) }
 
     LaunchedEffect(uiState) {
         when (uiState) {
@@ -51,6 +53,7 @@ fun ParticipantesScreen(
         }
     }
 
+    // Diálogo añadir participante
     if (mostrarDialogoAñadir) {
         AlertDialog(
             onDismissRequest = {
@@ -113,6 +116,32 @@ fun ParticipantesScreen(
                     error = ""
                     participantesViewModel.resetState()
                 }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo eliminar participante
+    participanteAEliminar?.let { p ->
+        AlertDialog(
+            onDismissRequest = { participanteAEliminar = null },
+            title = { Text("Eliminar participante", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás segura de que quieres eliminar a \"${p["nombre"]}\" del viaje?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val idUsuarioEliminar = p["idUsuario"]?.toString() ?: ""
+                        participantesViewModel.eliminarParticipante(idViaje, idUsuarioEliminar)
+                        participanteAEliminar = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { participanteAEliminar = null }) {
                     Text("Cancelar")
                 }
             }
@@ -198,6 +227,17 @@ fun ParticipantesScreen(
                                         fontSize = 11.sp,
                                         color = TripBlue,
                                         fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            } else {
+                                IconButton(
+                                    onClick = { participanteAEliminar = participante }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Eliminar participante",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }
