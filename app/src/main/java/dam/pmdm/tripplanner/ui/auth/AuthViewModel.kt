@@ -37,10 +37,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun registrar(email: String, password: String) {
+    fun registrar(email: String, password: String, nombre: String) {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
-            val resultado = repository.registrar(email, password)
+            val resultado = repository.registrar(email, password, nombre)
             _uiState.value = if (resultado.isSuccess) {
                 AuthUiState.Success
             } else {
@@ -48,6 +48,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+
 
     fun cerrarSesion() {
         repository.cerrarSesion()

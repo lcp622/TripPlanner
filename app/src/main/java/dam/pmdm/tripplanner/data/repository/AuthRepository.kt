@@ -17,10 +17,15 @@ class AuthRepository(private val context: Context) {
     val estaAutenticado: Boolean
         get() = auth.currentUser != null
 
-    suspend fun registrar(email: String, password: String): Result<FirebaseUser> {
+    suspend fun registrar(email: String, password: String, nombre: String): Result<FirebaseUser> {
         return try {
             val resultado = auth.createUserWithEmailAndPassword(email, password).await()
             val user = resultado.user!!
+            // Actualizar el nombre en Firebase Auth
+            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                .setDisplayName(nombre)
+                .build()
+            user.updateProfile(profileUpdates).await()
             guardarUsuarioEnRoom(user)
             Result.success(user)
         } catch (e: Exception) {
