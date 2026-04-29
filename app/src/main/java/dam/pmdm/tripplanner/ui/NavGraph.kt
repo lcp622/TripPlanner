@@ -32,6 +32,10 @@ import dam.pmdm.tripplanner.ui.viajes.DetalleViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.EditarViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModel
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModelFactory
+import dam.pmdm.tripplanner.data.repository.GastoRepository
+import dam.pmdm.tripplanner.ui.gastos.GastoViewModel
+import dam.pmdm.tripplanner.ui.gastos.GastoViewModelFactory
+import dam.pmdm.tripplanner.ui.gastos.CrearGastoScreen
 import kotlinx.coroutines.launch
 
 object Rutas {
@@ -42,6 +46,8 @@ object Rutas {
     const val DETALLE_VIAJE = "detalle_viaje/{idViaje}"
     const val EDITAR_VIAJE = "editar_viaje/{idViaje}"
     const val CREAR_ACTIVIDAD = "crear_actividad/{idViaje}"
+
+    const val CREAR_GASTO = "crear_gasto/{idViaje}"
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -60,6 +66,9 @@ fun NavGraph(
 
     val actividadRepository = ActividadRepository(db.actividadDao())
     val actividadViewModel: ActividadViewModel = viewModel(factory = ActividadViewModelFactory(actividadRepository))
+
+    val gastoRepository = GastoRepository(db.gastoDao())
+    val gastoViewModel: GastoViewModel = viewModel(factory = GastoViewModelFactory(gastoRepository))
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -138,9 +147,13 @@ fun NavGraph(
                     viaje = v,
                     actividadViewModel = actividadViewModel,
                     viajeViewModel = viajeViewModel,
+                    gastoViewModel = gastoViewModel,
                     onVolver = { navController.popBackStack() },
                     onNuevaActividad = {
                         navController.navigate("crear_actividad/$idViaje")
+                    },
+                    onNuevoGasto = {
+                        navController.navigate("crear_gasto/$idViaje")
                     },
                     onViajeEliminado = { navController.popBackStack() },
                     onEditarViaje = {
@@ -174,6 +187,16 @@ fun NavGraph(
                 idViaje = idViaje,
                 viewModel = actividadViewModel,
                 onActividadCreada = { navController.popBackStack() },
+                onVolver = { navController.popBackStack() }
+            )
+        }
+
+        composable(Rutas.CREAR_GASTO) { backStackEntry ->
+            val idViaje = backStackEntry.arguments?.getString("idViaje") ?: ""
+            CrearGastoScreen(
+                idViaje = idViaje,
+                viewModel = gastoViewModel,
+                onGastoCreado = { navController.popBackStack() },
                 onVolver = { navController.popBackStack() }
             )
         }

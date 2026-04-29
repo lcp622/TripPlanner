@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.sp
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
 import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModel
 import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
+import dam.pmdm.tripplanner.ui.gastos.GastoViewModel
+import dam.pmdm.tripplanner.ui.gastos.GastosViajeScreen
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -31,8 +33,10 @@ fun DetalleViajeScreen(
     viaje: ViajeEntity,
     actividadViewModel: ActividadViewModel,
     viajeViewModel: ViajeViewModel,
+    gastoViewModel: GastoViewModel,
     onVolver: () -> Unit,
     onNuevaActividad: () -> Unit,
+    onNuevoGasto: () -> Unit,
     onViajeEliminado: () -> Unit,
     onEditarViaje: () -> Unit
 ) {
@@ -234,15 +238,11 @@ fun DetalleViajeScreen(
                     viewModel = actividadViewModel,
                     onNuevaActividad = onNuevaActividad
                 )
-                1 -> Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Módulo de gastos — próximamente", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                1 -> GastosViajeScreen(
+                    idViaje = viaje.idViaje,
+                    viewModel = gastoViewModel,
+                    onNuevoGasto = onNuevoGasto
+                )
                 2 -> Box(
                     modifier = Modifier
                         .fillMaxSize()
