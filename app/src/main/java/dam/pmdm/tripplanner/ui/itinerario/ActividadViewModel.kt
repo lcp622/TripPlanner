@@ -59,6 +59,12 @@ class ActividadViewModel(private val repository: ActividadRepository) : ViewMode
             repository.eliminarActividad(actividad)
         }
     }
+
+    fun actualizarActividad(actividad: ActividadEntity) {
+        viewModelScope.launch {
+            repository.actualizarActividad(actividad)
+        }
+    }
 }
 
 class ActividadViewModelFactory(private val repository: ActividadRepository) : ViewModelProvider.Factory {

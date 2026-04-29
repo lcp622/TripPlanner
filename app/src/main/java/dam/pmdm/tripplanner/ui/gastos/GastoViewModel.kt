@@ -53,6 +53,12 @@ class GastoViewModel(private val repository: GastoRepository) : ViewModel() {
         }
     }
 
+    fun actualizarGasto(gasto: GastoEntity) {
+        viewModelScope.launch {
+            repository.actualizarGasto(gasto)
+        }
+    }
+
     fun eliminarGasto(gasto: GastoEntity) {
         viewModelScope.launch {
             repository.eliminarGasto(gasto)
@@ -65,7 +71,7 @@ class GastoViewModel(private val repository: GastoRepository) : ViewModel() {
 
     fun gastosPorCategoria(gastos: List<GastoEntity>): Map<String, Double> {
         return gastos.groupBy { it.categoria }
-            .mapValues { (_, gastos) -> gastos.sumOf { it.importe } }
+            .mapValues { (_, g) -> g.sumOf { it.importe } }
     }
 }
 

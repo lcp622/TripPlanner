@@ -48,6 +48,10 @@ object Rutas {
     const val CREAR_ACTIVIDAD = "crear_actividad/{idViaje}"
 
     const val CREAR_GASTO = "crear_gasto/{idViaje}"
+
+    const val EDITAR_ACTIVIDAD = "editar_actividad/{idViaje}/{idActividad}"
+
+    const val EDITAR_GASTO = "editar_gasto/{idViaje}/{idGasto}"
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -152,13 +156,38 @@ fun NavGraph(
                     onNuevaActividad = {
                         navController.navigate("crear_actividad/$idViaje")
                     },
+                    onEditarActividad = { idActividad ->
+                        navController.navigate("editar_actividad/$idViaje/$idActividad")
+                    },
                     onNuevoGasto = {
                         navController.navigate("crear_gasto/$idViaje")
                     },
                     onViajeEliminado = { navController.popBackStack() },
                     onEditarViaje = {
                         navController.navigate("editar_viaje/$idViaje")
+                    },
+                    onEditarGasto = { idGasto ->
+                        navController.navigate("editar_gasto/$idViaje/$idGasto")
                     }
+                )
+            }
+        }
+
+        composable(Rutas.EDITAR_ACTIVIDAD) { backStackEntry ->
+            val idViaje = backStackEntry.arguments?.getString("idViaje") ?: ""
+            val idActividad = backStackEntry.arguments?.getString("idActividad") ?: ""
+            var actividad by remember { mutableStateOf<dam.pmdm.tripplanner.data.local.entity.ActividadEntity?>(null) }
+
+            LaunchedEffect(idActividad) {
+                actividad = actividadRepository.obtenerPorId(idActividad)
+            }
+
+            actividad?.let { a ->
+                dam.pmdm.tripplanner.ui.itinerario.EditarActividadScreen(
+                    actividad = a,
+                    viewModel = actividadViewModel,
+                    onActividadActualizada = { navController.popBackStack() },
+                    onVolver = { navController.popBackStack() }
                 )
             }
         }
@@ -199,6 +228,24 @@ fun NavGraph(
                 onGastoCreado = { navController.popBackStack() },
                 onVolver = { navController.popBackStack() }
             )
+        }
+
+        composable(Rutas.EDITAR_GASTO) { backStackEntry ->
+            val idGasto = backStackEntry.arguments?.getString("idGasto") ?: ""
+            var gasto by remember { mutableStateOf<dam.pmdm.tripplanner.data.local.entity.GastoEntity?>(null) }
+
+            LaunchedEffect(idGasto) {
+                gasto = db.gastoDao().obtenerPorId(idGasto)
+            }
+
+            gasto?.let { g ->
+                dam.pmdm.tripplanner.ui.gastos.EditarGastoScreen(
+                    gasto = g,
+                    viewModel = gastoViewModel,
+                    onGastoActualizado = { navController.popBackStack() },
+                    onVolver = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

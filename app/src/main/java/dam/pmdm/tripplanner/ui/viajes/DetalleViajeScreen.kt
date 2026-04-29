@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -36,7 +37,9 @@ fun DetalleViajeScreen(
     gastoViewModel: GastoViewModel,
     onVolver: () -> Unit,
     onNuevaActividad: () -> Unit,
+    onEditarActividad: (String) -> Unit,
     onNuevoGasto: () -> Unit,
+    onEditarGasto: (String) -> Unit,
     onViajeEliminado: () -> Unit,
     onEditarViaje: () -> Unit
 ) {
@@ -105,7 +108,7 @@ fun DetalleViajeScreen(
                     onClick = onVolver,
                     modifier = Modifier.padding(8.dp).align(Alignment.TopStart)
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
                 }
 
                 // Botones editar y borrar
@@ -236,12 +239,14 @@ fun DetalleViajeScreen(
             when (tabSeleccionada) {
                 0 -> ItinerarioScreen(
                     viewModel = actividadViewModel,
-                    onNuevaActividad = onNuevaActividad
+                    onNuevaActividad = onNuevaActividad,
+                    onEditarActividad = onEditarActividad
                 )
                 1 -> GastosViajeScreen(
                     idViaje = viaje.idViaje,
                     viewModel = gastoViewModel,
-                    onNuevoGasto = onNuevoGasto
+                    onNuevoGasto = onNuevoGasto,
+                    onEditarGasto = onEditarGasto
                 )
                 2 -> Box(
                     modifier = Modifier

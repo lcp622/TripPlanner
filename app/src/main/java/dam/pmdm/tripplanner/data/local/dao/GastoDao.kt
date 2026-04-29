@@ -30,4 +30,6 @@ interface GastoDao {
 
     @Query("DELETE FROM GASTO WHERE idViaje = :idViaje")
     suspend fun eliminarPorViaje(idViaje: String)
+
+
 }

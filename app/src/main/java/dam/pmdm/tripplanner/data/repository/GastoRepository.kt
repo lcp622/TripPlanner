@@ -36,4 +36,9 @@ class GastoRepository(private val gastoDao: GastoDao) {
         coleccionGastos(gasto.idViaje).document(gasto.idGasto).delete().await()
         gastoDao.eliminar(gasto)
     }
+
+    suspend fun actualizarGasto(gasto: GastoEntity) {
+        coleccionGastos(gasto.idViaje).document(gasto.idGasto).set(gasto).await()
+        gastoDao.actualizar(gasto)
+    }
 }

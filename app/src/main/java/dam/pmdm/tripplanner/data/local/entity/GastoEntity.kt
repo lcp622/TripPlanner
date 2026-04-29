@@ -19,3 +19,4 @@ data class GastoEntity(
     val fecha: Long = 0L,
     val notas: String? = null
 )
+

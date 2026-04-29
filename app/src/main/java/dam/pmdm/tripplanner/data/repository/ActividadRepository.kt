@@ -21,4 +21,8 @@ class ActividadRepository(private val actividadDao: ActividadDao) {
     suspend fun eliminarActividad(actividad: ActividadEntity) {
         actividadDao.eliminar(actividad)
     }
+    suspend fun obtenerPorId(idActividad: String): ActividadEntity? {
+        return actividadDao.obtenerPorId(idActividad)
+    }
+
 }

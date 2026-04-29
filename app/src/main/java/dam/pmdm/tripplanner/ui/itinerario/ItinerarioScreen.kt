@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,7 +28,8 @@ import java.util.*
 @Composable
 fun ItinerarioScreen(
     viewModel: ActividadViewModel,
-    onNuevaActividad: () -> Unit
+    onNuevaActividad: () -> Unit,
+    onEditarActividad: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -102,7 +104,8 @@ fun ItinerarioScreen(
                             items(actividades) { actividad ->
                                 ActividadCard(
                                     actividad = actividad,
-                                    onEliminar = { viewModel.eliminarActividad(actividad) }
+                                    onEliminar = { viewModel.eliminarActividad(actividad) },
+                                    onEditar = { onEditarActividad(actividad.idActividad) }
                                 )
                             }
                         }
@@ -127,8 +130,35 @@ fun ItinerarioScreen(
 @Composable
 fun ActividadCard(
     actividad: ActividadEntity,
-    onEliminar: () -> Unit
+    onEliminar: () -> Unit,
+    onEditar: () -> Unit
 ) {
+    var mostrarDialogo by remember { mutableStateOf(false) }
+
+    if (mostrarDialogo) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogo = false },
+            title = { Text("Eliminar actividad", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás segura de que quieres eliminar \"${actividad.titulo}\"?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onEliminar()
+                        mostrarDialogo = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogo = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -192,13 +222,23 @@ fun ActividadCard(
                 }
             }
 
-            IconButton(onClick = onEliminar) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Eliminar",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(20.dp)
-                )
+            Row {
+                IconButton(onClick = onEditar) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Editar",
+                        tint = TripBlue,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                IconButton(onClick = { mostrarDialogo = true }) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

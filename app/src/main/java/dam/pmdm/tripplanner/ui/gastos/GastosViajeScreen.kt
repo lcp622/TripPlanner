@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,12 +21,14 @@ import dam.pmdm.tripplanner.data.local.entity.GastoEntity
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun GastosViajeScreen(
     idViaje: String,
     viewModel: GastoViewModel,
-    onNuevoGasto: () -> Unit
+    onNuevoGasto: () -> Unit,
+    onEditarGasto: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -81,7 +84,6 @@ fun GastosViajeScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Card resumen total
                         item {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -114,7 +116,8 @@ fun GastosViajeScreen(
                         items(state.gastos) { gasto ->
                             GastoCard(
                                 gasto = gasto,
-                                onEliminar = { viewModel.eliminarGasto(gasto) }
+                                onEliminar = { viewModel.eliminarGasto(gasto) },
+                                onEditar = { onEditarGasto(gasto.idGasto) }
                             )
                         }
                     }
@@ -138,9 +141,36 @@ fun GastosViajeScreen(
 @Composable
 fun GastoCard(
     gasto: GastoEntity,
-    onEliminar: () -> Unit
+    onEliminar: () -> Unit,
+    onEditar: () -> Unit
 ) {
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    var mostrarDialogo by remember { mutableStateOf(false) }
+
+    if (mostrarDialogo) {
+        AlertDialog(
+            onDismissRequest = { mostrarDialogo = false },
+            title = { Text("Eliminar gasto", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás segura de que quieres eliminar \"${gasto.concepto}\"?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onEliminar()
+                        mostrarDialogo = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarDialogo = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
     val categoriaColor = when (gasto.categoria) {
         "ALOJAMIENTO" -> Color(0xFF9C27B0)
         "TRANSPORTE" -> Color(0xFF2196F3)
@@ -159,7 +189,6 @@ fun GastoCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Badge categoría
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -206,7 +235,7 @@ fun GastoCard(
                 }
             }
 
-            Column(horizontalAlignment = Alignment.End) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "€${String.format("%.2f", gasto.importe)}",
                     fontWeight = FontWeight.Bold,
@@ -214,7 +243,18 @@ fun GastoCard(
                     color = TripBlue
                 )
                 IconButton(
-                    onClick = onEliminar,
+                    onClick = onEditar,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Editar",
+                        tint = TripBlue,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                IconButton(
+                    onClick = { mostrarDialogo = true },
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
