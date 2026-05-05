@@ -29,6 +29,7 @@ import dam.pmdm.tripplanner.data.repository.GastoRepository
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun GastosViajeScreen(
@@ -186,7 +187,7 @@ fun GastoCard(
         )
     }
 
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
     val categoriaColor = when (gasto.categoria) {
         "ALOJAMIENTO" -> Color(0xFF9C27B0)
         "TRANSPORTE" -> Color(0xFF2196F3)

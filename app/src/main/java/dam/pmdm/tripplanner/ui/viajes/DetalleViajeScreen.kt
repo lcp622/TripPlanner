@@ -27,6 +27,7 @@ import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.platform.LocalLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +48,7 @@ fun DetalleViajeScreen(
 ) {
     var tabSeleccionada by remember { mutableIntStateOf(0) }
     val tabs = listOf("Itinerario", "Gastos", "Viajeros", "Rutas")
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
     var mostrarDialogoBorrar by remember { mutableStateOf(false) }
 
     LaunchedEffect(viaje.idViaje) {
