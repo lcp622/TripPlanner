@@ -1,7 +1,5 @@
 package dam.pmdm.tripplanner.ui
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,21 +19,24 @@ import dam.pmdm.tripplanner.data.local.entity.UsuarioEntity
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
 import dam.pmdm.tripplanner.data.repository.ActividadRepository
 import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
+import dam.pmdm.tripplanner.data.repository.GastoRepository
 import dam.pmdm.tripplanner.ui.auth.AuthViewModel
 import dam.pmdm.tripplanner.ui.auth.LoginScreen
 import dam.pmdm.tripplanner.ui.auth.RegisterScreen
+import dam.pmdm.tripplanner.ui.gastos.CrearGastoScreen
+import dam.pmdm.tripplanner.ui.gastos.EditarGastoScreen
+import dam.pmdm.tripplanner.ui.gastos.GastoViewModel
+import dam.pmdm.tripplanner.ui.gastos.GastoViewModelFactory
 import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModel
 import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModelFactory
 import dam.pmdm.tripplanner.ui.itinerario.CrearActividadScreen
+import dam.pmdm.tripplanner.ui.itinerario.EditarActividadScreen
+import dam.pmdm.tripplanner.ui.perfil.EditarPerfilScreen
 import dam.pmdm.tripplanner.ui.viajes.CrearViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.DetalleViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.EditarViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModel
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModelFactory
-import dam.pmdm.tripplanner.data.repository.GastoRepository
-import dam.pmdm.tripplanner.ui.gastos.GastoViewModel
-import dam.pmdm.tripplanner.ui.gastos.GastoViewModelFactory
-import dam.pmdm.tripplanner.ui.gastos.CrearGastoScreen
 import kotlinx.coroutines.launch
 
 object Rutas {
@@ -46,24 +47,18 @@ object Rutas {
     const val DETALLE_VIAJE = "detalle_viaje/{idViaje}"
     const val EDITAR_VIAJE = "editar_viaje/{idViaje}"
     const val CREAR_ACTIVIDAD = "crear_actividad/{idViaje}"
-
     const val CREAR_GASTO = "crear_gasto/{idViaje}"
-
     const val EDITAR_ACTIVIDAD = "editar_actividad/{idViaje}/{idActividad}"
-
     const val EDITAR_GASTO = "editar_gasto/{idViaje}/{idGasto}"
-
     const val EDITAR_PERFIL = "editar_perfil"
-
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = viewModel(),
     settingsViewModel: SettingsViewModel
-){
+) {
     val context = LocalContext.current
     val db = TripPlannerDatabase.getInstance(context)
     val scope = rememberCoroutineScope()
@@ -156,6 +151,7 @@ fun NavGraph(
                     actividadViewModel = actividadViewModel,
                     viajeViewModel = viajeViewModel,
                     gastoViewModel = gastoViewModel,
+                    gastoRepository = gastoRepository,
                     viajeRepository = viajeRepository,
                     onVolver = { navController.popBackStack() },
                     onNuevaActividad = {
@@ -179,7 +175,6 @@ fun NavGraph(
         }
 
         composable(Rutas.EDITAR_ACTIVIDAD) { backStackEntry ->
-            val idViaje = backStackEntry.arguments?.getString("idViaje") ?: ""
             val idActividad = backStackEntry.arguments?.getString("idActividad") ?: ""
             var actividad by remember { mutableStateOf<dam.pmdm.tripplanner.data.local.entity.ActividadEntity?>(null) }
 
@@ -188,7 +183,7 @@ fun NavGraph(
             }
 
             actividad?.let { a ->
-                dam.pmdm.tripplanner.ui.itinerario.EditarActividadScreen(
+                EditarActividadScreen(
                     actividad = a,
                     viewModel = actividadViewModel,
                     onActividadActualizada = { navController.popBackStack() },
@@ -244,7 +239,7 @@ fun NavGraph(
             }
 
             gasto?.let { g ->
-                dam.pmdm.tripplanner.ui.gastos.EditarGastoScreen(
+                EditarGastoScreen(
                     gasto = g,
                     viewModel = gastoViewModel,
                     onGastoActualizado = { navController.popBackStack() },
@@ -254,7 +249,7 @@ fun NavGraph(
         }
 
         composable(Rutas.EDITAR_PERFIL) {
-            dam.pmdm.tripplanner.ui.perfil.EditarPerfilScreen(
+            EditarPerfilScreen(
                 authViewModel = authViewModel,
                 onVolver = { navController.popBackStack() }
             )

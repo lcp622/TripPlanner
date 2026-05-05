@@ -11,7 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import androidx.compose.ui.unit.sp
 import dam.pmdm.tripplanner.ui.theme.*
+import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,8 +30,17 @@ fun CrearGastoScreen(
     var categoriaSeleccionada by remember { mutableStateOf("OTROS") }
     var error by remember { mutableStateOf("") }
     var expandedCategoria by remember { mutableStateOf(false) }
+    var participantes by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
 
     val categorias = listOf("ALOJAMIENTO", "TRANSPORTE", "COMIDA", "OCIO", "OTROS")
+
+    LaunchedEffect(idViaje) {
+        val snapshot = FirebaseFirestore.getInstance()
+            .collection("viajes").document(idViaje)
+            .collection("participantes")
+            .get().await()
+        participantes = snapshot.documents.mapNotNull { it.data }
+    }
 
     Scaffold(
         topBar = {
@@ -82,7 +94,6 @@ fun CrearGastoScreen(
                 colors = tripTextFieldColors()
             )
 
-            // Dropdown categoría
             ExposedDropdownMenuBox(
                 expanded = expandedCategoria,
                 onExpandedChange = { expandedCategoria = it }
@@ -125,6 +136,22 @@ fun CrearGastoScreen(
                 colors = tripTextFieldColors()
             )
 
+            if (participantes.isNotEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = TripBlue.copy(alpha = 0.1f)
+                    ),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = "💡 El gasto se repartirá entre ${participantes.size + 1} personas",
+                        modifier = Modifier.padding(12.dp),
+                        fontSize = 13.sp,
+                        color = TripBlue
+                    )
+                }
+            }
+
             if (error.isNotEmpty()) {
                 Text(text = error, color = MaterialTheme.colorScheme.error)
             }
@@ -138,13 +165,14 @@ fun CrearGastoScreen(
                         importe.toDouble() <= 0 -> error = "El importe debe ser mayor que 0"
                         else -> {
                             val idUsuario = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-                            viewModel.crearGasto(
+                            viewModel.crearGastoConReparto(
                                 idViaje = idViaje,
                                 idPagador = idUsuario,
                                 concepto = concepto,
                                 importe = importe.toDouble(),
                                 categoria = categoriaSeleccionada,
-                                notas = notas.ifBlank { null }
+                                notas = notas.ifBlank { null },
+                                participantes = participantes
                             )
                             onGastoCreado()
                         }

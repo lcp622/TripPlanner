@@ -67,4 +67,48 @@ class GastoRepository(private val gastoDao: GastoDao) {
             listeners.forEach { it.remove() }
         }
     }
+
+    suspend fun crearRepartoGasto(idViaje: String, gasto: GastoEntity, participantes: List<Map<String, Any>>) {
+        val importePorPersona = gasto.importe / (participantes.size + 1) // +1 por el pagador
+
+        participantes.forEach { participante ->
+            val idUsuario = participante["idUsuario"]?.toString() ?: return@forEach
+            // El pagador no se debe a sí mismo
+            if (idUsuario == gasto.idPagador) return@forEach
+
+            val reparto = mapOf(
+                "idReparto" to java.util.UUID.randomUUID().toString(),
+                "idGasto" to gasto.idGasto,
+                "idViaje" to idViaje,
+                "idUsuario" to idUsuario,
+                "nombreUsuario" to (participante["nombre"]?.toString() ?: ""),
+                "importeAsignado" to importePorPersona,
+                "saldado" to false
+            )
+
+            db.collection("viajes").document(idViaje)
+                .collection("gastos").document(gasto.idGasto)
+                .collection("repartos").document(idUsuario)
+                .set(reparto).await()
+        }
+    }
+
+    fun obtenerRepartos(idViaje: String, idGasto: String): Flow<List<Map<String, Any>>> = callbackFlow {
+        val listener = db.collection("viajes").document(idViaje)
+            .collection("gastos").document(idGasto)
+            .collection("repartos")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                val repartos = snapshot?.documents?.mapNotNull { it.data } ?: emptyList()
+                trySend(repartos)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun marcarComoSaldado(idViaje: String, idGasto: String, idUsuario: String) {
+        db.collection("viajes").document(idViaje)
+            .collection("gastos").document(idGasto)
+            .collection("repartos").document(idUsuario)
+            .update("saldado", true).await()
+    }
 }

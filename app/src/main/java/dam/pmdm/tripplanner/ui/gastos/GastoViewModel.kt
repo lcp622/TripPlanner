@@ -30,13 +30,14 @@ class GastoViewModel(private val repository: GastoRepository) : ViewModel() {
         }
     }
 
-    fun crearGasto(
+    fun crearGastoConReparto(
         idViaje: String,
         idPagador: String,
         concepto: String,
         importe: Double,
         categoria: String,
-        notas: String?
+        notas: String?,
+        participantes: List<Map<String, Any>>
     ) {
         viewModelScope.launch {
             val gasto = GastoEntity(
@@ -50,6 +51,9 @@ class GastoViewModel(private val repository: GastoRepository) : ViewModel() {
                 notas = notas
             )
             repository.crearGasto(gasto)
+            if (participantes.isNotEmpty()) {
+                repository.crearRepartoGasto(idViaje, gasto, participantes)
+            }
         }
     }
 
@@ -73,7 +77,15 @@ class GastoViewModel(private val repository: GastoRepository) : ViewModel() {
         return gastos.groupBy { it.categoria }
             .mapValues { (_, g) -> g.sumOf { it.importe } }
     }
+
+    fun marcarComoSaldado(idViaje: String, idGasto: String, idUsuario: String) {
+        viewModelScope.launch {
+            repository.marcarComoSaldado(idViaje, idGasto, idUsuario)
+        }
+    }
 }
+
+
 
 class GastoViewModelFactory(private val repository: GastoRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

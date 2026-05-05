@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
@@ -19,15 +18,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
-import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModel
-import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
+import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
+import dam.pmdm.tripplanner.data.repository.GastoRepository
 import dam.pmdm.tripplanner.ui.gastos.GastoViewModel
 import dam.pmdm.tripplanner.ui.gastos.GastosViajeScreen
-import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
+import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModel
+import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.platform.LocalLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +35,7 @@ fun DetalleViajeScreen(
     actividadViewModel: ActividadViewModel,
     viajeViewModel: ViajeViewModel,
     gastoViewModel: GastoViewModel,
+    gastoRepository: GastoRepository,
     viajeRepository: FirestoreViajeRepository,
     onVolver: () -> Unit,
     onNuevaActividad: () -> Unit,
@@ -44,10 +44,10 @@ fun DetalleViajeScreen(
     onEditarGasto: (String) -> Unit,
     onViajeEliminado: () -> Unit,
     onEditarViaje: () -> Unit
-){
+) {
     var tabSeleccionada by remember { mutableIntStateOf(0) }
     val tabs = listOf("Itinerario", "Gastos", "Viajeros", "Rutas")
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     var mostrarDialogoBorrar by remember { mutableStateOf(false) }
 
     LaunchedEffect(viaje.idViaje) {
@@ -63,12 +63,8 @@ fun DetalleViajeScreen(
     if (mostrarDialogoBorrar) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoBorrar = false },
-            title = {
-                Text("Eliminar viaje", fontWeight = FontWeight.Bold)
-            },
-            text = {
-                Text("¿Estás segura de que quieres eliminar \"${viaje.nombre}\"? Esta acción no se puede deshacer.")
-            },
+            title = { Text("Eliminar viaje", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás segura de que quieres eliminar \"${viaje.nombre}\"? Esta acción no se puede deshacer.") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -113,10 +109,7 @@ fun DetalleViajeScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
                 }
 
-                // Botones editar y borrar
-                Row(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
-                ) {
+                Row(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
                     IconButton(onClick = onEditarViaje) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar viaje", tint = Color.White)
                     }
@@ -125,9 +118,7 @@ fun DetalleViajeScreen(
                     }
                 }
 
-                Column(
-                    modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)
-                ) {
+                Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
                     Text(
                         text = viaje.nombre,
                         fontSize = 26.sp,
@@ -252,6 +243,7 @@ fun DetalleViajeScreen(
                 1 -> GastosViajeScreen(
                     idViaje = viaje.idViaje,
                     viewModel = gastoViewModel,
+                    repository = gastoRepository,
                     onNuevoGasto = onNuevoGasto,
                     onEditarGasto = onEditarGasto
                 )
