@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -16,6 +18,11 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val props = Properties()
+        props.load(project.rootProject.file("local.properties").inputStream())
+        val apiKey = props.getProperty("MAPTILER_API_KEY", "")
+        buildConfigField("String", "MAPTILER_API_KEY", "\"$apiKey\"")
     }
 
     buildTypes {
@@ -27,12 +34,15 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -74,6 +84,9 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+
+    // MapLibre
+    implementation(libs.maplibre.android)
 
     // Testing
     testImplementation(libs.junit)

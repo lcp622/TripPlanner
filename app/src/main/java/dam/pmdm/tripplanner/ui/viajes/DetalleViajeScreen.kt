@@ -27,7 +27,6 @@ import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.platform.LocalLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +47,7 @@ fun DetalleViajeScreen(
 ) {
     var tabSeleccionada by remember { mutableIntStateOf(0) }
     val tabs = listOf("Itinerario", "Gastos", "Viajeros", "Rutas")
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     var mostrarDialogoBorrar by remember { mutableStateOf(false) }
 
     LaunchedEffect(viaje.idViaje) {
@@ -252,18 +251,10 @@ fun DetalleViajeScreen(
                     idViaje = viaje.idViaje,
                     repository = viajeRepository
                 )
-                3 -> Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "Módulo de rutas — próximamente",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                3 -> RutasScreen(
+                    idViaje = viaje.idViaje,
+                    paisDestino = viaje.paisDestino
+                )
             }
         }
     }

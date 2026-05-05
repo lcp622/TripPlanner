@@ -22,5 +22,7 @@ dependencyResolutionManagement {
     }
 }
 
+
+
 rootProject.name = "TripPlanner"
 include(":app")
