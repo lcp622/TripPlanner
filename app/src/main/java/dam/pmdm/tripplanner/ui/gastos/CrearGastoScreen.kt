@@ -164,10 +164,13 @@ fun CrearGastoScreen(
                         importe.toDoubleOrNull() == null -> error = "El importe debe ser un número"
                         importe.toDouble() <= 0 -> error = "El importe debe ser mayor que 0"
                         else -> {
-                            val idUsuario = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                            val user = FirebaseAuth.getInstance().currentUser
+                            val idUsuario = user?.uid ?: ""
+                            val nombreUsuario = user?.displayName ?: user?.email?.substringBefore("@") ?: "Usuario"
                             viewModel.crearGastoConReparto(
                                 idViaje = idViaje,
                                 idPagador = idUsuario,
+                                nombrePagador = nombreUsuario,
                                 concepto = concepto,
                                 importe = importe.toDouble(),
                                 categoria = categoriaSeleccionada,

@@ -96,6 +96,11 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
     }
 
     suspend fun obtenerViajePorIdFirestore(idViaje: String): ViajeEntity? {
+        // Primero intentar desde Room (instantáneo)
+        val local = viajeDao.obtenerPorId(idViaje)
+        if (local != null) return local
+
+        // Si no está en Room, buscar en Firestore
         return try {
             val doc = coleccionViajes.document(idViaje).get().await()
             val ahora = System.currentTimeMillis()
@@ -105,10 +110,12 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
                     ahora > viaje.fechaFin -> "FINALIZADO"
                     else -> "EN_CURSO"
                 }
-                viaje.copy(estado = estado)
+                val viajeActualizado = viaje.copy(estado = estado)
+                viajeDao.insertar(viajeActualizado)
+                viajeActualizado
             }
         } catch (e: Exception) {
-            viajeDao.obtenerPorId(idViaje)
+            null
         }
     }
 

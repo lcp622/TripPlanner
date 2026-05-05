@@ -32,8 +32,8 @@ fun MainScreen(
     onCerrarSesion: () -> Unit,
     onNuevoViaje: () -> Unit,
     onViajeClick: (String) -> Unit,
-    onEditarPerfil: () -> Unit
-) {
+    onEditarPerfil: () -> Unit,
+){
     val items = listOf(
         BottomNavItem("Viajes", Icons.Default.Map, "viajes"),
         BottomNavItem("Explorar", Icons.Default.Explore, "explorar"),

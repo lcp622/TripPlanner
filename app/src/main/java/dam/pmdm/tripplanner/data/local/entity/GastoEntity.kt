@@ -17,6 +17,7 @@ data class GastoEntity(
     val importe: Double = 0.0,
     val categoria: String = "OTROS",
     val fecha: Long = 0L,
-    val notas: String? = null
+    val notas: String? = null,
+    val nombrePagador: String = ""
 )
 

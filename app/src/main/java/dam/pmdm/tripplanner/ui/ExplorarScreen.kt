@@ -3,87 +3,135 @@ package dam.pmdm.tripplanner.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import dam.pmdm.tripplanner.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 import java.net.URLEncoder
 
-data class LugarInteres(
+data class PuntoInteres(
     val nombre: String,
     val tipo: String,
-    val direccion: String,
-    val lat: Double,
-    val lon: Double
+    val emoji: String
 )
 
 @Composable
 fun ExplorarScreen() {
     var busqueda by remember { mutableStateOf("") }
-    var lugares by remember { mutableStateOf<List<LugarInteres>>(emptyList()) }
+    var destino by remember { mutableStateOf("") }
+    var puntos by remember { mutableStateOf<Map<String, List<PuntoInteres>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    fun buscarLugares() {
+    fun buscarDestino() {
         if (busqueda.isBlank()) return
         scope.launch {
             isLoading = true
             error = ""
-            lugares = emptyList()
+            puntos = emptyMap()
             try {
                 val query = URLEncoder.encode(busqueda, "UTF-8")
-                val url = "https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=15&addressdetails=1"
-
-                val response = withContext(Dispatchers.IO) {
-                    val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-                    connection.requestMethod = "GET"
-                    connection.setRequestProperty("User-Agent", "TripPlanner Android App")
-                    connection.connectTimeout = 10000
-                    connection.readTimeout = 10000
-                    connection.connect()
-                    connection.inputStream.bufferedReader().readText()
+                val nominatimUrl = "https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1"
+                val nominatimResponse = withContext(Dispatchers.IO) {
+                    val conn = java.net.URL(nominatimUrl).openConnection() as java.net.HttpURLConnection
+                    conn.requestMethod = "GET"
+                    conn.setRequestProperty("User-Agent", "TripPlanner/1.0 Android")
+                    conn.connectTimeout = 10000
+                    conn.readTimeout = 10000
+                    conn.connect()
+                    conn.inputStream.bufferedReader().readText()
                 }
 
-                android.util.Log.d("Explorar", "Response: ${response.take(200)}")
-                val jsonArray = JSONArray(response)
-                val lista = mutableListOf<LugarInteres>()
-
-                for (i in 0 until jsonArray.length()) {
-                    val item = jsonArray.getJSONObject(i)
-                    val nombre = item.getString("display_name").split(",").first().trim()
-                    val tipo = item.optString("type", "lugar").replaceFirstChar { it.uppercase() }
-                    val direccion = item.getString("display_name")
-                    val lat = item.getDouble("lat")
-                    val lon = item.getDouble("lon")
-
-                    lista.add(LugarInteres(nombre, tipo, direccion, lat, lon))
+                val nominatimJson = JSONArray(nominatimResponse)
+                if (nominatimJson.length() == 0) {
+                    error = "No se encontró el destino"
+                    isLoading = false
+                    return@launch
                 }
-                lugares = lista
+
+                val lugar = nominatimJson.getJSONObject(0)
+                val lat = lugar.getDouble("lat")
+                val lon = lugar.getDouble("lon")
+                destino = lugar.getString("display_name").split(",").first().trim()
+
+                val radio = 20000
+                val overpassQuery = """
+                    [out:json][timeout:30];
+                    (
+                        node["tourism"="museum"](around:$radio,$lat,$lon);
+                        node["historic"="monument"](around:$radio,$lat,$lon);
+                        node["historic"="castle"](around:$radio,$lat,$lon);
+                        node["historic"="ruins"](around:$radio,$lat,$lon);
+                        node["amenity"="restaurant"](around:$radio,$lat,$lon);
+                        node["amenity"="cafe"](around:$radio,$lat,$lon);
+                        node["leisure"="park"](around:$radio,$lat,$lon);
+                    );
+                    out body 100;
+                """.trimIndent()
+
+                val overpassUrl = "https://overpass-api.de/api/interpreter"
+                val overpassResponse = withContext(Dispatchers.IO) {
+                    val conn = java.net.URL(overpassUrl).openConnection() as java.net.HttpURLConnection
+                    conn.requestMethod = "POST"
+                    conn.setRequestProperty("User-Agent", "TripPlanner/1.0 Android")
+                    conn.doOutput = true
+                    conn.connectTimeout = 30000
+                    conn.readTimeout = 30000
+                    conn.outputStream.write("data=${URLEncoder.encode(overpassQuery, "UTF-8")}".toByteArray())
+                    conn.inputStream.bufferedReader().readText()
+                }
+
+                val overpassJson = JSONObject(overpassResponse)
+                val elements = overpassJson.getJSONArray("elements")
+                val resultado = mutableMapOf<String, MutableList<PuntoInteres>>()
+
+                for (i in 0 until elements.length()) {
+                    val element = elements.getJSONObject(i)
+                    if (!element.has("tags")) continue
+                    val tags = element.getJSONObject("tags")
+                    val nombre = tags.optString("name", tags.optString("name:es", "")).ifBlank { continue }
+
+                    val (categoria, emoji) = when {
+                        tags.has("tourism") && tags.getString("tourism") == "museum" -> "🏛️ Museos" to "🏛️"
+                        tags.has("historic") && tags.getString("historic") == "monument" -> "🗿 Monumentos" to "🗿"
+                        tags.has("historic") && tags.getString("historic") == "castle" -> "🏰 Castillos" to "🏰"
+                        tags.has("historic") && tags.getString("historic") == "ruins" -> "🏚️ Ruinas" to "🏚️"
+                        tags.has("amenity") && tags.getString("amenity") == "restaurant" -> "🍽️ Restaurantes" to "🍽️"
+                        tags.has("amenity") && tags.getString("amenity") == "cafe" -> "☕ Cafés" to "☕"
+                        tags.has("leisure") && tags.getString("leisure") == "park" -> "🌳 Parques" to "🌳"
+                        else -> continue
+                    }
+
+                    if (!resultado.containsKey(categoria)) resultado[categoria] = mutableListOf()
+                    if ((resultado[categoria]?.size ?: 0) < 15) {
+                        resultado[categoria]?.add(PuntoInteres(nombre, categoria, emoji))
+                    }
+                }
+
+                puntos = resultado
+                if (puntos.isEmpty()) error = "No se encontraron lugares de interés en este destino"
+
             } catch (e: Exception) {
                 android.util.Log.e("Explorar", "Error: ${e.message}")
-                error = "Error al buscar: ${e.message}"
+                error = "Error al buscar. Comprueba tu conexión."
             }
             isLoading = false
         }
@@ -102,7 +150,7 @@ fun ExplorarScreen() {
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = "Descubre monumentos y lugares de interés",
+            text = "Descubre qué ver en tu próximo destino",
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -112,13 +160,13 @@ fun ExplorarScreen() {
         OutlinedTextField(
             value = busqueda,
             onValueChange = { busqueda = it },
-            label = { Text("Busca un lugar, ciudad o monumento") },
+            label = { Text("Busca un país o ciudad") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             trailingIcon = {
                 IconButton(onClick = {
                     keyboardController?.hide()
-                    buscarLugares()
+                    buscarDestino()
                 }) {
                     Icon(Icons.Default.Search, contentDescription = "Buscar", tint = TripBlue)
                 }
@@ -126,7 +174,7 @@ fun ExplorarScreen() {
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = {
                 keyboardController?.hide()
-                buscarLugares()
+                buscarDestino()
             }),
             colors = tripTextFieldColors()
         )
@@ -135,87 +183,79 @@ fun ExplorarScreen() {
 
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = TripBlue)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = TripBlue)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Buscando lugares de interés...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         } else if (error.isNotEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(text = error, color = MaterialTheme.colorScheme.error)
             }
-        } else if (lugares.isEmpty()) {
+        } else if (puntos.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "🔍", fontSize = 48.sp)
+                    Text(text = "✈️", fontSize = 48.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Busca un destino",
+                        text = "¿A dónde quieres ir?",
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Ej: Coliseo Roma, Torre Eiffel...",
+                        text = "Ej: Roma, París, Tokio, España...",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         } else {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(lugares) { lugar ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .background(TripBlue.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-                                        .padding(8.dp)
-                                ) {
-                                    Text(text = "📍", fontSize = 20.sp)
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = lugar.nombre,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .background(TripBlue.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                item {
+                    Text(
+                        text = "📍 $destino",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TripBlue
+                    )
+                }
+
+                puntos.entries.forEach { (categoria, lista) ->
+                    item {
+                        Text(
+                            text = categoria,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TripTextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(2.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                lista.forEachIndexed { index, punto ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.padding(vertical = 6.dp)
                                     ) {
+                                        Text(text = punto.emoji, fontSize = 20.sp)
                                         Text(
-                                            text = lugar.tipo,
-                                            fontSize = 11.sp,
-                                            color = TripBlue,
-                                            fontWeight = FontWeight.Medium
+                                            text = punto.nombre,
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f)
                                         )
                                     }
+                                    if (index < lista.size - 1) {
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                    }
                                 }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.LocationOn,
-                                    contentDescription = null,
-                                    tint = TripGray,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = lugar.direccion,
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2
-                                )
                             }
                         }
                     }

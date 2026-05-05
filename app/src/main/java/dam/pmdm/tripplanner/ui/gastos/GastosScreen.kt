@@ -44,20 +44,24 @@ fun GastosScreen() {
         val user = FirebaseAuth.getInstance().currentUser ?: return@LaunchedEffect
         val firestore = FirebaseFirestore.getInstance()
 
-        val viajesSnapshot = firestore.collection("viajes")
+        // Viajes propios
+        val viajesPropios = firestore.collection("viajes")
             .whereEqualTo("idPropietario", user.uid)
             .get().await()
 
-        val idViajes = viajesSnapshot.documents.map { it.id }
-        val nombres = viajesSnapshot.documents.associate {
-            it.id to (it.getString("nombre") ?: "Viaje")
-        }
-        nombresViajes = nombres
+        // Viajes donde es participante
+        val viajesParticipante = firestore.collection("viajes")
+            .whereArrayContains("participantesIds", user.uid)
+            .get().await()
+
+        // Combinar ambas listas sin duplicados
+        val todosViajes = (viajesPropios.documents + viajesParticipante.documents)
+            .distinctBy { it.id }
 
         val gastos = mutableListOf<GastoEntity>()
-        idViajes.forEach { idViaje ->
+        todosViajes.forEach { viajeDoc ->
             val gastosSnapshot = firestore.collection("viajes")
-                .document(idViaje)
+                .document(viajeDoc.id)
                 .collection("gastos")
                 .get().await()
             gastos.addAll(

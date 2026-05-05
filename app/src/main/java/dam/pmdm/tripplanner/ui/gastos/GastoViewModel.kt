@@ -33,6 +33,7 @@ class GastoViewModel(private val repository: GastoRepository) : ViewModel() {
     fun crearGastoConReparto(
         idViaje: String,
         idPagador: String,
+        nombrePagador: String,
         concepto: String,
         importe: Double,
         categoria: String,
@@ -44,6 +45,7 @@ class GastoViewModel(private val repository: GastoRepository) : ViewModel() {
                 idGasto = UUID.randomUUID().toString(),
                 idViaje = idViaje,
                 idPagador = idPagador,
+                nombrePagador = nombrePagador,
                 concepto = concepto,
                 importe = importe,
                 categoria = categoria,

@@ -29,11 +29,11 @@ import dam.pmdm.tripplanner.data.repository.GastoRepository
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun GastosViajeScreen(
     idViaje: String,
+    presupuesto: Double,
     viewModel: GastoViewModel,
     repository: GastoRepository,
     onNuevoGasto: () -> Unit,
@@ -94,29 +94,56 @@ fun GastosViajeScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         item {
+                            val totalGastado = viewModel.totalGastos(state.gastos)
+                            val restante = presupuesto - totalGastado
+
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(containerColor = TripBlue)
                             ) {
-                                Row(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(16.dp)
                                 ) {
-                                    Text(
-                                        text = "Total gastado",
-                                        color = Color.White,
-                                        fontSize = 14.sp
-                                    )
-                                    Text(
-                                        text = "€${String.format("%.2f", viewModel.totalGastos(state.gastos))}",
-                                        color = Color.White,
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Total gastado",
+                                            color = Color.White,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            text = "€${String.format("%.2f", totalGastado)}",
+                                            color = Color.White,
+                                            fontSize = 22.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Presupuesto restante",
+                                            color = Color.White.copy(alpha = 0.8f),
+                                            fontSize = 13.sp
+                                        )
+                                        Text(
+                                            text = "€${String.format("%.2f", restante)}",
+                                            color = if (restante < 0) Color(0xFFFF5252) else Color.White,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -187,7 +214,7 @@ fun GastoCard(
         )
     }
 
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     val categoriaColor = when (gasto.categoria) {
         "ALOJAMIENTO" -> Color(0xFF9C27B0)
         "TRANSPORTE" -> Color(0xFF2196F3)
@@ -239,6 +266,14 @@ fun GastoCard(
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (gasto.nombrePagador.isNotBlank()) {
+                        Text(
+                            text = "💳 Pagado por ${gasto.nombrePagador}",
+                            fontSize = 12.sp,
+                            color = TripBlue.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                     Box(
                         modifier = Modifier
                             .background(categoriaColor.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
@@ -285,7 +320,6 @@ fun GastoCard(
                 }
             }
 
-            // Botón expandir reparto
             if (repartos.isNotEmpty()) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 TextButton(

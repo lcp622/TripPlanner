@@ -1,7 +1,10 @@
 package dam.pmdm.tripplanner.ui
 
-import android.os.Build
-import androidx.annotation.RequiresApi
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -9,6 +12,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -34,6 +39,7 @@ import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModelFactory
 import dam.pmdm.tripplanner.ui.itinerario.CrearActividadScreen
 import dam.pmdm.tripplanner.ui.itinerario.EditarActividadScreen
 import dam.pmdm.tripplanner.ui.perfil.EditarPerfilScreen
+import dam.pmdm.tripplanner.ui.theme.TripBlue
 import dam.pmdm.tripplanner.ui.viajes.CrearViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.DetalleViajeScreen
 import dam.pmdm.tripplanner.ui.viajes.EditarViajeScreen
@@ -55,7 +61,6 @@ object Rutas {
     const val EDITAR_PERFIL = "editar_perfil"
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
@@ -91,7 +96,14 @@ fun NavGraph(
 
     val startDestination = if (authViewModel.estaAutenticado) Rutas.MAIN else Rutas.LOGIN
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
+    ) {
 
         composable(Rutas.LOGIN) {
             LoginScreen(
@@ -148,9 +160,16 @@ fun NavGraph(
                 viaje = viajeRepository.obtenerViajePorIdFirestore(idViaje)
             }
 
-            viaje?.let { v ->
+            if (viaje == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = TripBlue)
+                }
+            } else {
                 DetalleViajeScreen(
-                    viaje = v,
+                    viaje = viaje!!,
                     actividadViewModel = actividadViewModel,
                     viajeViewModel = viajeViewModel,
                     gastoViewModel = gastoViewModel,

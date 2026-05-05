@@ -26,6 +26,7 @@ import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModel
 import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
+import androidx.compose.runtime.saveable.rememberSaveable
 import java.util.*
 import androidx.compose.ui.platform.LocalLocale
 
@@ -46,7 +47,7 @@ fun DetalleViajeScreen(
     onViajeEliminado: () -> Unit,
     onEditarViaje: () -> Unit
 ) {
-    var tabSeleccionada by remember { mutableIntStateOf(0) }
+    var tabSeleccionada by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf("Itinerario", "Gastos", "Viajeros", "Rutas")
     val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
     var mostrarDialogoBorrar by remember { mutableStateOf(false) }
@@ -243,6 +244,7 @@ fun DetalleViajeScreen(
                 )
                 1 -> GastosViajeScreen(
                     idViaje = viaje.idViaje,
+                    presupuesto = viaje.presupuestoTotal,
                     viewModel = gastoViewModel,
                     repository = gastoRepository,
                     onNuevoGasto = onNuevoGasto,
