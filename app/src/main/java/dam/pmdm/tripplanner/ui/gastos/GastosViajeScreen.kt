@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,7 +30,6 @@ import dam.pmdm.tripplanner.data.repository.GastoRepository
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun GastosViajeScreen(
@@ -41,6 +41,8 @@ fun GastosViajeScreen(
     onEditarGasto: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var textoBusqueda by remember { mutableStateOf("") }
+    var filtroCategoria by remember { mutableStateOf("TODAS") }
 
     LaunchedEffect(idViaje) {
         viewModel.cargarGastos(idViaje)
@@ -66,6 +68,13 @@ fun GastosViajeScreen(
                 )
             }
             is GastoUiState.Success -> {
+                val gastosFiltrados = state.gastos.filter { gasto ->
+                    (textoBusqueda.isBlank() ||
+                            gasto.concepto.contains(textoBusqueda, ignoreCase = true) ||
+                            gasto.nombrePagador.contains(textoBusqueda, ignoreCase = true)) &&
+                            (filtroCategoria == "TODAS" || gasto.categoria == filtroCategoria)
+                }
+
                 if (state.gastos.isEmpty()) {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
@@ -94,6 +103,7 @@ fun GastosViajeScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // Card resumen
                         item {
                             val totalGastado = viewModel.totalGastos(state.gastos)
                             val restante = presupuesto - totalGastado
@@ -113,11 +123,7 @@ fun GastosViajeScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = "Total gastado",
-                                            color = Color.White,
-                                            fontSize = 14.sp
-                                        )
+                                        Text(text = "Total gastado", color = Color.White, fontSize = 14.sp)
                                         Text(
                                             text = "€${String.format("%.2f", totalGastado)}",
                                             color = Color.White,
@@ -150,14 +156,82 @@ fun GastosViajeScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        items(state.gastos) { gasto ->
-                            GastoCard(
-                                gasto = gasto,
-                                onEliminar = { viewModel.eliminarGasto(gasto) },
-                                onEditar = { onEditarGasto(gasto.idGasto) },
-                                repository = repository,
-                                viewModel = viewModel
+                        // Buscador
+                        item {
+                            OutlinedTextField(
+                                value = textoBusqueda,
+                                onValueChange = { textoBusqueda = it },
+                                label = { Text("Buscar gastos...") },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                leadingIcon = {
+                                    Icon(Icons.Default.Search, contentDescription = null, tint = TripGray)
+                                },
+                                colors = tripTextFieldColors()
                             )
+                        }
+
+                        // Filtros por categoría
+                        item {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf("TODAS", "ALOJAMIENTO", "TRANSPORTE", "COMIDA", "OCIO", "OTROS").forEach { cat ->
+                                    val emoji = when (cat) {
+                                        "ALOJAMIENTO" -> "🏨"
+                                        "TRANSPORTE" -> "✈️"
+                                        "COMIDA" -> "🍽️"
+                                        "OCIO" -> "🎭"
+                                        "OTROS" -> "💳"
+                                        else -> "🔍"
+                                    }
+                                    FilterChip(
+                                        selected = filtroCategoria == cat,
+                                        onClick = { filtroCategoria = cat },
+                                        label = {
+                                            Text(
+                                                if (cat == "TODAS") "Todas" else emoji,
+                                                fontSize = 12.sp
+                                            )
+                                        },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = TripBlue,
+                                            selectedLabelColor = Color.White
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        // Resultados
+                        if (gastosFiltrados.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(text = "🔍", fontSize = 36.sp)
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "No se encontraron gastos",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            items(gastosFiltrados) { gasto ->
+                                GastoCard(
+                                    gasto = gasto,
+                                    onEliminar = { viewModel.eliminarGasto(gasto) },
+                                    onEditar = { onEditarGasto(gasto.idGasto) },
+                                    repository = repository,
+                                    viewModel = viewModel
+                                )
+                            }
                         }
                     }
                 }
@@ -215,7 +289,7 @@ fun GastoCard(
         )
     }
 
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     val categoriaColor = when (gasto.categoria) {
         "ALOJAMIENTO" -> Color(0xFF9C27B0)
         "TRANSPORTE" -> Color(0xFF2196F3)
@@ -296,37 +370,18 @@ fun GastoCard(
                         fontSize = 16.sp,
                         color = TripBlue
                     )
-                    IconButton(
-                        onClick = onEditar,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Editar",
-                            tint = TripBlue,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    IconButton(onClick = onEditar, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = TripBlue, modifier = Modifier.size(18.dp))
                     }
-                    IconButton(
-                        onClick = { mostrarDialogo = true },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Eliminar",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    IconButton(onClick = { mostrarDialogo = true }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                     }
                 }
             }
 
             if (repartos.isNotEmpty()) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                TextButton(
-                    onClick = { expandido = !expandido },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                TextButton(onClick = { expandido = !expandido }, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = if (expandido) "Ocultar reparto" else "Ver reparto (${repartos.size})",
                         fontSize = 12.sp,
@@ -342,9 +397,7 @@ fun GastoCard(
 
                 if (expandido) {
                     Column(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .padding(bottom = 12.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         repartos.forEach { reparto ->
@@ -362,10 +415,7 @@ fun GastoCard(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(
-                                            if (saldado) Color(0xFF4CAF50).copy(alpha = 0.15f)
-                                            else TripBlue.copy(alpha = 0.15f)
-                                        ),
+                                        .background(if (saldado) Color(0xFF4CAF50).copy(alpha = 0.15f) else TripBlue.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -376,12 +426,7 @@ fun GastoCard(
                                     )
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = nombre,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                    Text(text = nombre, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                                     Text(
                                         text = if (saldado) "Saldado ✓" else "Pendiente",
                                         fontSize = 11.sp,
@@ -396,9 +441,7 @@ fun GastoCard(
                                 )
                                 if (esMiReparto && !saldado) {
                                     Button(
-                                        onClick = {
-                                            viewModel.marcarComoSaldado(gasto.idViaje, gasto.idGasto, currentUserId)
-                                        },
+                                        onClick = { viewModel.marcarComoSaldado(gasto.idViaje, gasto.idGasto, currentUserId) },
                                         shape = RoundedCornerShape(8.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
