@@ -9,7 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +34,8 @@ fun ViajesScreen(
     onViajeClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var textoBusqueda by remember { mutableStateOf("") }
+    var filtroEstado by remember { mutableStateOf("TODOS") }
 
     Scaffold(
         topBar = {
@@ -88,10 +90,7 @@ fun ViajesScreen(
                     ) {
                         CircularProgressIndicator(color = TripBlue)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Cargando viajes...",
-                            color = TripTextSecondary
-                        )
+                        Text(text = "Cargando viajes...", color = TripTextSecondary)
                     }
                 }
                 is ViajeUiState.Error -> {
@@ -102,6 +101,14 @@ fun ViajesScreen(
                     )
                 }
                 is ViajeUiState.Success -> {
+                    val viajesFiltrados = state.viajes
+                        .filter { viaje ->
+                            (textoBusqueda.isBlank() ||
+                                    viaje.nombre.contains(textoBusqueda, ignoreCase = true) ||
+                                    viaje.paisDestino.contains(textoBusqueda, ignoreCase = true)) &&
+                                    (filtroEstado == "TODOS" || viaje.estado == filtroEstado)
+                        }
+
                     if (state.viajes.isEmpty()) {
                         Column(
                             modifier = Modifier.align(Alignment.Center),
@@ -128,11 +135,73 @@ fun ViajesScreen(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            items(state.viajes) { viaje ->
-                                ViajeCard(
-                                    viaje = viaje,
-                                    onClick = { onViajeClick(viaje.idViaje) }
+                            // Buscador
+                            item {
+                                OutlinedTextField(
+                                    value = textoBusqueda,
+                                    onValueChange = { textoBusqueda = it },
+                                    label = { Text("Buscar viajes...") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Search, contentDescription = null, tint = TripGray)
+                                    },
+                                    colors = tripTextFieldColors()
                                 )
+                            }
+
+                            // Filtros por estado
+                            item {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    listOf("TODOS", "PLANIFICADO", "EN_CURSO", "FINALIZADO").forEach { estado ->
+                                        val label = when (estado) {
+                                            "TODOS" -> "Todos"
+                                            "PLANIFICADO" -> "Planificado"
+                                            "EN_CURSO" -> "En curso"
+                                            "FINALIZADO" -> "Finalizado"
+                                            else -> estado
+                                        }
+                                        FilterChip(
+                                            selected = filtroEstado == estado,
+                                            onClick = { filtroEstado = estado },
+                                            label = { Text(label, fontSize = 12.sp) },
+                                            colors = FilterChipDefaults.filterChipColors(
+                                                selectedContainerColor = TripBlue,
+                                                selectedLabelColor = Color.White
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Resultados
+                            if (viajesFiltrados.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(text = "🔍", fontSize = 36.sp)
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = "No se encontraron viajes",
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                items(viajesFiltrados) { viaje ->
+                                    ViajeCard(
+                                        viaje = viaje,
+                                        onClick = { onViajeClick(viaje.idViaje) }
+                                    )
+                                }
                             }
                         }
                     }
