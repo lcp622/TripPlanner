@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import com.vanpra.composematerialdialogs.MaterialDialog
 import com.vanpra.composematerialdialogs.datetime.date.datepicker
@@ -34,10 +35,26 @@ fun CrearViajeScreen(
     var paisDestino by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var presupuesto by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf("") }
+
+    // Errores en tiempo real
+    val errorNombre = if (nombre.isBlank() && nombre.isNotEmpty().not()) ""
+    else if (nombre.isNotBlank() && nombre.length < 3) "El nombre debe tener al menos 3 caracteres"
+    else ""
+    val errorDestino = if (paisDestino.isBlank() && paisDestino.isNotEmpty().not()) ""
+    else if (paisDestino.isNotBlank() && paisDestino.length < 2) "El destino debe tener al menos 2 caracteres"
+    else ""
+    val errorPresupuesto = if (presupuesto.isBlank()) ""
+    else if (presupuesto.toDoubleOrNull() == null) "Introduce un número válido"
+    else if (presupuesto.toDouble() < 0) "El presupuesto no puede ser negativo"
+    else ""
 
     var fechaInicioSeleccionada by remember { mutableStateOf<LocalDate?>(null) }
     var fechaFinSeleccionada by remember { mutableStateOf<LocalDate?>(null) }
+    val errorFechas = if (fechaInicioSeleccionada != null && fechaFinSeleccionada != null &&
+        fechaFinSeleccionada!!.isBefore(fechaInicioSeleccionada))
+        "La fecha de fin debe ser posterior a la de inicio" else ""
+
+    var errorGeneral by remember { mutableStateOf("") }
 
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val fechaInicioDialogState = rememberMaterialDialogState()
@@ -109,7 +126,11 @@ fun CrearViajeScreen(
                 label = { Text("Nombre del viaje *") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                colors = tripTextFieldColors()
+                colors = tripTextFieldColors(),
+                isError = errorNombre.isNotEmpty(),
+                supportingText = if (errorNombre.isNotEmpty()) {
+                    { Text(errorNombre, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                } else null
             )
 
             OutlinedTextField(
@@ -118,7 +139,11 @@ fun CrearViajeScreen(
                 label = { Text("País / Destino *") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                colors = tripTextFieldColors()
+                colors = tripTextFieldColors(),
+                isError = errorDestino.isNotEmpty(),
+                supportingText = if (errorDestino.isNotEmpty()) {
+                    { Text(errorDestino, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                } else null
             )
 
             OutlinedTextField(
@@ -148,7 +173,11 @@ fun CrearViajeScreen(
                     }
                 },
                 shape = MaterialTheme.shapes.medium,
-                colors = tripTextFieldColors()
+                colors = tripTextFieldColors(),
+                isError = errorFechas.isNotEmpty(),
+                supportingText = if (errorFechas.isNotEmpty()) {
+                    { Text(errorFechas, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                } else null
             )
 
             OutlinedTextField(
@@ -157,7 +186,11 @@ fun CrearViajeScreen(
                 label = { Text("Presupuesto (€)") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                colors = tripTextFieldColors()
+                colors = tripTextFieldColors(),
+                isError = errorPresupuesto.isNotEmpty(),
+                supportingText = if (errorPresupuesto.isNotEmpty()) {
+                    { Text(errorPresupuesto, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                } else null
             )
 
             OutlinedTextField(
@@ -170,19 +203,21 @@ fun CrearViajeScreen(
                 colors = tripTextFieldColors()
             )
 
-            if (error.isNotEmpty()) {
-                Text(text = error, color = MaterialTheme.colorScheme.error)
+            if (errorGeneral.isNotEmpty()) {
+                Text(text = errorGeneral, color = MaterialTheme.colorScheme.error)
             }
 
             Button(
                 onClick = {
                     when {
-                        nombre.isBlank() -> error = "El nombre es obligatorio"
-                        paisDestino.isBlank() -> error = "El destino es obligatorio"
-                        fechaInicioSeleccionada == null -> error = "La fecha de inicio es obligatoria"
-                        fechaFinSeleccionada == null -> error = "La fecha de fin es obligatoria"
-                        fechaFinSeleccionada!!.isBefore(fechaInicioSeleccionada) -> error = "La fecha de fin debe ser posterior"
+                        nombre.isBlank() -> errorGeneral = "El nombre es obligatorio"
+                        paisDestino.isBlank() -> errorGeneral = "El destino es obligatorio"
+                        fechaInicioSeleccionada == null -> errorGeneral = "La fecha de inicio es obligatoria"
+                        fechaFinSeleccionada == null -> errorGeneral = "La fecha de fin es obligatoria"
+                        errorFechas.isNotEmpty() -> errorGeneral = errorFechas
+                        errorPresupuesto.isNotEmpty() -> errorGeneral = errorPresupuesto
                         else -> {
+                            errorGeneral = ""
                             val inicio = fechaInicioSeleccionada!!
                                 .atStartOfDay(ZoneId.systemDefault())
                                 .toInstant().toEpochMilli()
