@@ -24,4 +24,6 @@ interface ActividadDao {
 
     @Query("DELETE FROM ACTIVIDAD WHERE idViaje = :idViaje")
     suspend fun eliminarPorViaje(idViaje: String)
+    @Query("SELECT * FROM ACTIVIDAD")
+    suspend fun obtenerTodasLasActividades(): List<ActividadEntity>
 }
