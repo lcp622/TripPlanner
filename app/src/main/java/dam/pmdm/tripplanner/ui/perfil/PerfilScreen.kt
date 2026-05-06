@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Person
@@ -33,6 +34,8 @@ fun PerfilScreen(
     val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
     val user = FirebaseAuth.getInstance().currentUser
     var mostrarDialogoCerrarSesion by remember { mutableStateOf(false) }
+    var mostrarDialogoBorrarCuenta by remember { mutableStateOf(false) }
+    var errorBorrar by remember { mutableStateOf("") }
 
     if (mostrarDialogoCerrarSesion) {
         AlertDialog(
@@ -58,6 +61,58 @@ fun PerfilScreen(
         )
     }
 
+    if (mostrarDialogoBorrarCuenta) {
+        AlertDialog(
+            onDismissRequest = {
+                mostrarDialogoBorrarCuenta = false
+                errorBorrar = ""
+            },
+            title = { Text("Eliminar cuenta", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("¿Estás segura de que quieres eliminar tu cuenta? Esta acción no se puede deshacer y perderás todos tus datos.")
+                    if (errorBorrar.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = errorBorrar,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        user?.delete()
+                            ?.addOnSuccessListener {
+                                mostrarDialogoBorrarCuenta = false
+                                onCerrarSesion()
+                            }
+                            ?.addOnFailureListener { e ->
+                                errorBorrar = if (e.message?.contains("recent") == true) {
+                                    "Por seguridad, cierra sesión y vuelve a iniciarla antes de eliminar la cuenta."
+                                } else {
+                                    "Error al eliminar la cuenta: ${e.message}"
+                                }
+                            }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar cuenta")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    mostrarDialogoBorrarCuenta = false
+                    errorBorrar = ""
+                }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -67,7 +122,6 @@ fun PerfilScreen(
     ) {
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Avatar
         Box(
             modifier = Modifier
                 .size(90.dp)
@@ -108,18 +162,13 @@ fun PerfilScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Botón editar perfil
         Button(
             onClick = onEditarPerfil,
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = TripBlue),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(
-                Icons.Default.Edit,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
+            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Editar perfil", fontWeight = FontWeight.Medium)
         }
@@ -205,6 +254,35 @@ fun PerfilScreen(
                 )
                 Text(
                     text = "Cerrar sesión",
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(2.dp),
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { mostrarDialogoBorrarCuenta = true }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+                Text(
+                    text = "Eliminar cuenta",
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.error
                 )

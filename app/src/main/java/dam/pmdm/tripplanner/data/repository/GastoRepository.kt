@@ -69,7 +69,7 @@ class GastoRepository(private val gastoDao: GastoDao) {
     }
 
     suspend fun crearRepartoGasto(idViaje: String, gasto: GastoEntity, participantes: List<Map<String, Any>>) {
-        val importePorPersona = gasto.importe / (participantes.size + 1) // +1 por el pagador
+        val importePorPersona = gasto.importe / participantes.size // +1 por el pagador
 
         participantes.forEach { participante ->
             val idUsuario = participante["idUsuario"]?.toString() ?: return@forEach

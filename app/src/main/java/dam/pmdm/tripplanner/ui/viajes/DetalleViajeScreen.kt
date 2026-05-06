@@ -1,5 +1,7 @@
 package dam.pmdm.tripplanner.ui.viajes
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,26 +12,31 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
 import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
 import dam.pmdm.tripplanner.data.repository.GastoRepository
+import dam.pmdm.tripplanner.mostrarNotificacionColaborativa
 import dam.pmdm.tripplanner.ui.gastos.GastoViewModel
 import dam.pmdm.tripplanner.ui.gastos.GastosViajeScreen
 import dam.pmdm.tripplanner.ui.itinerario.ActividadViewModel
 import dam.pmdm.tripplanner.ui.itinerario.ItinerarioScreen
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
-import androidx.compose.runtime.saveable.rememberSaveable
 import java.util.*
 import androidx.compose.ui.platform.LocalLocale
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleViajeScreen(
@@ -51,9 +58,58 @@ fun DetalleViajeScreen(
     val tabs = listOf("Itinerario", "Gastos", "Viajeros", "Rutas")
     val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
     var mostrarDialogoBorrar by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     LaunchedEffect(viaje.idViaje) {
         actividadViewModel.cargarActividades(viaje.idViaje)
+    }
+
+    // Escuchar cambios colaborativos ignorando la carga inicial
+    DisposableEffect(viaje.idViaje) {
+        var primeraVezActividades = true
+        var primeraVezGastos = true
+
+        val listenerActividades = FirebaseFirestore.getInstance()
+            .collection("viajes").document(viaje.idViaje)
+            .collection("actividades")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                if (primeraVezActividades) {
+                    primeraVezActividades = false
+                    return@addSnapshotListener
+                }
+                snapshot.documentChanges.forEach { change ->
+                    val idAutor = change.document.getString("idUsuario") ?: ""
+                    if (change.type.name == "ADDED" && idAutor != currentUserId) {
+                        val titulo = change.document.getString("titulo") ?: "Nueva actividad"
+                        mostrarNotificacionColaborativa(context, "Nueva actividad añadida", titulo)
+                    }
+                }
+            }
+
+        val listenerGastos = FirebaseFirestore.getInstance()
+            .collection("viajes").document(viaje.idViaje)
+            .collection("gastos")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                if (primeraVezGastos) {
+                    primeraVezGastos = false
+                    return@addSnapshotListener
+                }
+                snapshot.documentChanges.forEach { change ->
+                    val idAutor = change.document.getString("idPagador") ?: ""
+                    if (change.type.name == "ADDED" && idAutor != currentUserId) {
+                        val concepto = change.document.getString("concepto") ?: "Nuevo gasto"
+                        mostrarNotificacionColaborativa(context, "Nuevo gasto añadido", concepto)
+                    }
+                }
+            }
+
+        onDispose {
+            listenerActividades.remove()
+            listenerGastos.remove()
+        }
     }
 
     val estadoColor = when (viaje.estado) {

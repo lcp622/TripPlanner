@@ -160,7 +160,7 @@ fun CrearGastoScreen(
                     shape = MaterialTheme.shapes.medium
                 ) {
                     Text(
-                        text = "💡 El gasto se repartirá entre ${participantes.size + 1} personas",
+                        text = "💡 El gasto se repartirá entre ${participantes.size} personas",
                         modifier = Modifier.padding(12.dp),
                         fontSize = 13.sp,
                         color = TripBlue

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.auth.FirebaseAuth
 import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
 import dam.pmdm.tripplanner.data.local.entity.ParticipanteEntity
 import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
@@ -36,6 +37,12 @@ fun ParticipantesScreen(
     )
     val uiState by participantesViewModel.uiState.collectAsState()
     val participantes by repository.obtenerParticipantes(idViaje).collectAsState(initial = emptyList())
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+    // Filtrar para no mostrar al usuario actual
+    val participantesFiltrados = participantes.filter {
+        it["idUsuario"]?.toString() != currentUserId
+    }
 
     var mostrarDialogoAñadir by remember { mutableStateOf(false) }
     var mostrarLimiteAlcanzado by remember { mutableStateOf(false) }
@@ -48,22 +55,30 @@ fun ParticipantesScreen(
     // Sincronizar participantes con Room
     LaunchedEffect(participantes) {
         if (participantes.isNotEmpty()) {
-            val db = TripPlannerDatabase.getInstance(context)
-            scope.launch {
-                participantes.forEach { participante ->
-                    val idUsuario = participante["idUsuario"]?.toString() ?: return@forEach
-                    val esAdmin = participante["esAdmin"] as? Boolean ?: false
-                    val fechaUnion = (participante["fechaUnion"] as? Long) ?: System.currentTimeMillis()
-                    db.participanteDao().insertar(
-                        ParticipanteEntity(
-                            idParticipante = "${idViaje}_${idUsuario}",
-                            idViaje = idViaje,
-                            idUsuario = idUsuario,
-                            fechaUnion = fechaUnion,
-                            esAdmin = esAdmin
-                        )
-                    )
+            try {
+                val db = TripPlannerDatabase.getInstance(context)
+                scope.launch {
+                    participantes.forEach { participante ->
+                        try {
+                            val idUsuario = participante["idUsuario"]?.toString() ?: return@forEach
+                            val esAdmin = participante["esAdmin"] as? Boolean ?: false
+                            val fechaUnion = (participante["fechaUnion"] as? Long) ?: System.currentTimeMillis()
+                            db.participanteDao().insertar(
+                                ParticipanteEntity(
+                                    idParticipante = "${idViaje}_${idUsuario}",
+                                    idViaje = idViaje,
+                                    idUsuario = idUsuario,
+                                    fechaUnion = fechaUnion,
+                                    esAdmin = esAdmin
+                                )
+                            )
+                        } catch (e: Exception) {
+                            android.util.Log.e("ParticipantesScreen", "Error insertando participante: ${e.message}")
+                        }
+                    }
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("ParticipantesScreen", "Error: ${e.message}")
             }
         }
     }
@@ -83,7 +98,6 @@ fun ParticipantesScreen(
         }
     }
 
-    // Diálogo límite alcanzado
     if (mostrarLimiteAlcanzado) {
         AlertDialog(
             onDismissRequest = { mostrarLimiteAlcanzado = false },
@@ -97,7 +111,6 @@ fun ParticipantesScreen(
         )
     }
 
-    // Diálogo añadir participante
     if (mostrarDialogoAñadir) {
         AlertDialog(
             onDismissRequest = {
@@ -166,7 +179,6 @@ fun ParticipantesScreen(
         )
     }
 
-    // Diálogo eliminar participante
     participanteAEliminar?.let { p ->
         AlertDialog(
             onDismissRequest = { participanteAEliminar = null },
@@ -197,7 +209,7 @@ fun ParticipantesScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        if (participantes.isEmpty()) {
+        if (participantesFiltrados.isEmpty()) {
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -233,7 +245,7 @@ fun ParticipantesScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                 }
 
-                items(participantes) { participante ->
+                items(participantesFiltrados) { participante ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),

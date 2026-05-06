@@ -26,7 +26,11 @@ class ActividadViewModel(private val repository: ActividadRepository) : ViewMode
         viewModelScope.launch {
             repository.obtenerActividades(idViaje)
                 .catch { e -> _uiState.value = ActividadUiState.Error(e.message ?: "Error") }
-                .collect { actividades -> _uiState.value = ActividadUiState.Success(actividades) }
+                .collect { actividades ->
+                    _uiState.value = ActividadUiState.Success(
+                        actividades.sortedWith(compareBy({ it.fecha }, { it.horaInicio }))
+                    )
+                }
         }
     }
 

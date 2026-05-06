@@ -75,8 +75,28 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
 
     // Guardar viaje en Firestore y Room
     suspend fun crearViaje(viaje: ViajeEntity) {
-        coleccionViajes.document(viaje.idViaje).set(viaje).await()
-        viajeDao.insertar(viaje)
+        val user = auth.currentUser ?: return
+        val usuarioDoc = db.collection("usuarios").document(user.uid).get().await()
+        val nombre = usuarioDoc.getString("nombre") ?: user.displayName ?: user.email ?: "Usuario"
+
+        val viajeConNombre = viaje.copy(nombrePropietario = nombre)
+        coleccionViajes.document(viaje.idViaje).set(viajeConNombre).await()
+        viajeDao.insertar(viajeConNombre)
+
+        // Añadir al propietario como participante admin
+        val email = user.email ?: ""
+        val participante = mapOf(
+            "idUsuario" to user.uid,
+            "nombre" to nombre,
+            "email" to email,
+            "esAdmin" to true,
+            "fechaUnion" to System.currentTimeMillis()
+        )
+
+        db.collection("viajes").document(viaje.idViaje)
+            .collection("participantes")
+            .document(user.uid)
+            .set(participante).await()
     }
 
     // Actualizar viaje en Firestore y Room
@@ -87,7 +107,23 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
 
     // Eliminar viaje en Firestore y Room
     suspend fun eliminarViaje(idViaje: String) {
-        coleccionViajes.document(idViaje).delete().await()
+        val viajeRef = coleccionViajes.document(idViaje)
+
+        // Borrar subcolecciones
+        listOf("actividades", "gastos", "participantes", "puntos_interes").forEach { subcoleccion ->
+            val docs = viajeRef.collection(subcoleccion).get().await()
+            docs.documents.forEach { doc ->
+                // Borrar sub-subcolecciones de gastos (repartos)
+                if (subcoleccion == "gastos") {
+                    val repartos = doc.reference.collection("repartos").get().await()
+                    repartos.documents.forEach { it.reference.delete().await() }
+                }
+                doc.reference.delete().await()
+            }
+        }
+
+        // Borrar el viaje
+        viajeRef.delete().await()
         viajeDao.eliminarPorId(idViaje)
     }
 
@@ -96,14 +132,22 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
     }
 
     suspend fun obtenerViajePorIdFirestore(idViaje: String): ViajeEntity? {
-        // Primero intentar desde Room (instantáneo)
+        val ahora = System.currentTimeMillis()
+
+        // Primero intentar desde Room pero recalculando el estado
         val local = viajeDao.obtenerPorId(idViaje)
-        if (local != null) return local
+        if (local != null) {
+            val estado = when {
+                ahora < local.fechaInicio -> "PLANIFICADO"
+                ahora > local.fechaFin -> "FINALIZADO"
+                else -> "EN_CURSO"
+            }
+            return local.copy(estado = estado)
+        }
 
         // Si no está en Room, buscar en Firestore
         return try {
             val doc = coleccionViajes.document(idViaje).get().await()
-            val ahora = System.currentTimeMillis()
             doc.toObject(ViajeEntity::class.java)?.let { viaje ->
                 val estado = when {
                     ahora < viaje.fechaInicio -> "PLANIFICADO"

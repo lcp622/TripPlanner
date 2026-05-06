@@ -32,7 +32,7 @@ class Converters {
         RutaEntity::class,
         PuntoInteresEntity::class
     ],
-    version = 8,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

@@ -76,7 +76,6 @@ fun RutasScreen(
                 Button(
                     onClick = {
                         val nombreMarker = marker.title
-                        // Eliminar de Firestore
                         FirebaseFirestore.getInstance()
                             .collection("viajes").document(idViaje)
                             .collection("puntos_interes")
@@ -86,7 +85,6 @@ fun RutasScreen(
                                 snapshot.documents.forEach { doc ->
                                     val idPunto = doc.getString("idPunto") ?: doc.id
                                     doc.reference.delete()
-                                    // Eliminar de Room
                                     GlobalScope.launch {
                                         TripPlannerDatabase.getInstance(context)
                                             .puntoInteresDao()
@@ -203,13 +201,11 @@ fun RutasScreen(
                                 "orden" to orden
                             )
 
-                            // Guardar en Firestore
                             FirebaseFirestore.getInstance()
                                 .collection("viajes").document(idViaje)
                                 .collection("puntos_interes")
                                 .add(puntoFirestore)
 
-                            // Guardar en Room
                             GlobalScope.launch {
                                 TripPlannerDatabase.getInstance(context)
                                     .puntoInteresDao()
@@ -265,10 +261,11 @@ fun RutasScreen(
                 MapLibre.getInstance(ctx)
                 val mapView = MapView(ctx)
                 mapView.onCreate(Bundle())
+                mapView.onStart()
+                mapView.onResume()
                 mapView.getMapAsync { map ->
                     mapRef = map
                     map.setStyle(styleUrl) {
-                        // Cargar desde Firestore y sincronizar con Room
                         FirebaseFirestore.getInstance()
                             .collection("viajes").document(idViaje)
                             .collection("puntos_interes")
@@ -284,7 +281,6 @@ fun RutasScreen(
                                     val idPunto = doc.getString("idPunto") ?: doc.id
                                     val orden = doc.getLong("orden")?.toInt() ?: 0
 
-                                    // Guardar en Room
                                     GlobalScope.launch {
                                         TripPlannerDatabase.getInstance(ctx)
                                             .puntoInteresDao()
@@ -330,6 +326,11 @@ fun RutasScreen(
                     }
                 }
                 mapView
+            },
+            onRelease = { mapView ->
+                mapView.onPause()
+                mapView.onStop()
+                mapView.onDestroy()
             },
             modifier = Modifier.fillMaxSize()
         )

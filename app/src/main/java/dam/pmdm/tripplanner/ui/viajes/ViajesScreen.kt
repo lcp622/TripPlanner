@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -135,7 +136,6 @@ fun ViajesScreen(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            // Buscador
                             item {
                                 OutlinedTextField(
                                     value = textoBusqueda,
@@ -150,11 +150,8 @@ fun ViajesScreen(
                                 )
                             }
 
-                            // Filtros por estado
                             item {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     listOf("TODOS", "PLANIFICADO", "EN_CURSO", "FINALIZADO").forEach { estado ->
                                         val label = when (estado) {
                                             "TODOS" -> "Todos"
@@ -176,7 +173,6 @@ fun ViajesScreen(
                                 }
                             }
 
-                            // Resultados
                             if (viajesFiltrados.isEmpty()) {
                                 item {
                                     Box(
@@ -263,6 +259,22 @@ fun ViajeCard(
                         fontSize = 13.sp,
                         color = Color.White.copy(alpha = 0.9f)
                     )
+                }
+                if (viaje.nombrePropietario.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = viaje.nombrePropietario,
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
 
