@@ -1,6 +1,6 @@
 package dam.pmdm.tripplanner.ui
 
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Explore
@@ -8,17 +8,18 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
+import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
+import dam.pmdm.tripplanner.ui.gastos.GastosScreen
 import dam.pmdm.tripplanner.ui.perfil.PerfilScreen
 import dam.pmdm.tripplanner.ui.theme.TripBlue
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModel
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModelFactory
-import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
-import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
-import androidx.compose.ui.platform.LocalContext
 import dam.pmdm.tripplanner.ui.viajes.ViajesScreen
-import dam.pmdm.tripplanner.ui.gastos.GastosScreen
 
 data class BottomNavItem(
     val label: String,
@@ -32,8 +33,8 @@ fun MainScreen(
     onCerrarSesion: () -> Unit,
     onNuevoViaje: () -> Unit,
     onViajeClick: (String) -> Unit,
-    onEditarPerfil: () -> Unit,
-){
+    onEditarPerfil: () -> Unit
+) {
     val items = listOf(
         BottomNavItem("Viajes", Icons.Default.Map, "viajes"),
         BottomNavItem("Explorar", Icons.Default.Explore, "explorar"),
@@ -52,46 +53,47 @@ fun MainScreen(
         viajeViewModel.recargarViajes()
     }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-                items.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        selected = selectedItem == index,
-                        onClick = { selectedItem = index },
-                        icon = {
-                            Icon(item.icon, contentDescription = item.label)
-                        },
-                        label = { Text(item.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = TripBlue,
-                            selectedTextColor = TripBlue,
-                            indicatorColor = TripBlue.copy(alpha = 0.1f)
+    Column(modifier = Modifier.fillMaxSize()) {
+        SinConexionBanner()
+
+        Scaffold(
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    items.forEachIndexed { index, item ->
+                        NavigationBarItem(
+                            selected = selectedItem == index,
+                            onClick = { selectedItem = index },
+                            icon = {
+                                Icon(item.icon, contentDescription = item.label)
+                            },
+                            label = { Text(item.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = TripBlue,
+                                selectedTextColor = TripBlue,
+                                indicatorColor = TripBlue.copy(alpha = 0.1f)
+                            )
                         )
-                    )
+                    }
                 }
             }
-        }
-    ) { padding ->
-        androidx.compose.foundation.layout.Box(
-            modifier = androidx.compose.ui.Modifier.padding(padding)
-        ) {
-            when (selectedItem) {
-                0 -> ViajesScreen(
-                    viewModel = viajeViewModel,
-                    onNuevoViaje = onNuevoViaje,
-                    onViajeClick = onViajeClick,
-                )
-
-                1 -> ExplorarScreen()
-                2 -> GastosScreen()
-                3 -> PerfilScreen(
-                    settingsViewModel = settingsViewModel,
-                    onCerrarSesion = onCerrarSesion,
-                    onEditarPerfil = onEditarPerfil
-                )
+        ) { padding ->
+            Box(modifier = Modifier.padding(padding)) {
+                when (selectedItem) {
+                    0 -> ViajesScreen(
+                        viewModel = viajeViewModel,
+                        onNuevoViaje = onNuevoViaje,
+                        onViajeClick = onViajeClick
+                    )
+                    1 -> ExplorarScreen()
+                    2 -> GastosScreen()
+                    3 -> PerfilScreen(
+                        settingsViewModel = settingsViewModel,
+                        onCerrarSesion = onCerrarSesion,
+                        onEditarPerfil = onEditarPerfil
+                    )
+                }
             }
         }
     }
