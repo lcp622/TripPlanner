@@ -15,12 +15,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
+import dam.pmdm.tripplanner.data.local.entity.ParticipanteEntity
 import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
 import dam.pmdm.tripplanner.ui.theme.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun ParticipantesScreen(
@@ -38,6 +42,31 @@ fun ParticipantesScreen(
     var emailNuevo by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
     var participanteAEliminar by remember { mutableStateOf<Map<String, Any>?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Sincronizar participantes con Room
+    LaunchedEffect(participantes) {
+        if (participantes.isNotEmpty()) {
+            val db = TripPlannerDatabase.getInstance(context)
+            scope.launch {
+                participantes.forEach { participante ->
+                    val idUsuario = participante["idUsuario"]?.toString() ?: return@forEach
+                    val esAdmin = participante["esAdmin"] as? Boolean ?: false
+                    val fechaUnion = (participante["fechaUnion"] as? Long) ?: System.currentTimeMillis()
+                    db.participanteDao().insertar(
+                        ParticipanteEntity(
+                            idParticipante = "${idViaje}_${idUsuario}",
+                            idViaje = idViaje,
+                            idUsuario = idUsuario,
+                            fechaUnion = fechaUnion,
+                            esAdmin = esAdmin
+                        )
+                    )
+                }
+            }
+        }
+    }
 
     LaunchedEffect(uiState) {
         when (uiState) {
