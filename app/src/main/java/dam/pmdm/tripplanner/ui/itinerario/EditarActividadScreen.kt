@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vanpra.composematerialdialogs.MaterialDialog
 import com.vanpra.composematerialdialogs.datetime.date.datepicker
 import com.vanpra.composematerialdialogs.datetime.time.timepicker
@@ -38,7 +39,7 @@ fun EditarActividadScreen(
     var titulo by remember { mutableStateOf(actividad.titulo) }
     var descripcion by remember { mutableStateOf(actividad.descripcion ?: "") }
     var lugar by remember { mutableStateOf(actividad.lugar ?: "") }
-    var error by remember { mutableStateOf("") }
+    var errorGeneral by remember { mutableStateOf("") }
 
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -49,15 +50,18 @@ fun EditarActividadScreen(
         )
     }
     var horaInicioSeleccionada by remember {
-        mutableStateOf(
-            actividad.horaInicio?.let { LocalTime.parse(it) }
-        )
+        mutableStateOf(actividad.horaInicio?.let { LocalTime.parse(it) })
     }
     var horaFinSeleccionada by remember {
-        mutableStateOf(
-            actividad.horaFin?.let { LocalTime.parse(it) }
-        )
+        mutableStateOf(actividad.horaFin?.let { LocalTime.parse(it) })
     }
+
+    // Validaciones en tiempo real
+    val errorTitulo = if (titulo.isNotBlank() && titulo.length < 3)
+        "El título debe tener al menos 3 caracteres" else ""
+    val errorHoras = if (horaInicioSeleccionada != null && horaFinSeleccionada != null &&
+        horaFinSeleccionada!!.isBefore(horaInicioSeleccionada))
+        "La hora de fin debe ser posterior a la de inicio" else ""
 
     val fechaDialogState = rememberMaterialDialogState()
     val horaInicioDialogState = rememberMaterialDialogState()
@@ -144,7 +148,11 @@ fun EditarActividadScreen(
                 label = { Text("Título *") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                colors = tripTextFieldColors()
+                colors = tripTextFieldColors(),
+                isError = errorTitulo.isNotEmpty(),
+                supportingText = if (errorTitulo.isNotEmpty()) {
+                    { Text(errorTitulo, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                } else null
             )
 
             OutlinedTextField(
@@ -189,7 +197,11 @@ fun EditarActividadScreen(
                     }
                 },
                 shape = MaterialTheme.shapes.medium,
-                colors = tripTextFieldColors()
+                colors = tripTextFieldColors(),
+                isError = errorHoras.isNotEmpty(),
+                supportingText = if (errorHoras.isNotEmpty()) {
+                    { Text(errorHoras, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                } else null
             )
 
             OutlinedTextField(
@@ -211,15 +223,18 @@ fun EditarActividadScreen(
                 colors = tripTextFieldColors()
             )
 
-            if (error.isNotEmpty()) {
-                Text(text = error, color = MaterialTheme.colorScheme.error)
+            if (errorGeneral.isNotEmpty()) {
+                Text(text = errorGeneral, color = MaterialTheme.colorScheme.error)
             }
 
             Button(
                 onClick = {
                     when {
-                        titulo.isBlank() -> error = "El título es obligatorio"
+                        titulo.isBlank() -> errorGeneral = "El título es obligatorio"
+                        errorTitulo.isNotEmpty() -> errorGeneral = errorTitulo
+                        errorHoras.isNotEmpty() -> errorGeneral = errorHoras
                         else -> {
+                            errorGeneral = ""
                             val fechaLong = fechaSeleccionada
                                 .atStartOfDay(ZoneId.systemDefault())
                                 .toInstant().toEpochMilli()

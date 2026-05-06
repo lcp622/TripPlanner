@@ -5,12 +5,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dam.pmdm.tripplanner.data.local.entity.GastoEntity
 import dam.pmdm.tripplanner.ui.theme.*
 
@@ -26,8 +26,16 @@ fun EditarGastoScreen(
     var importe by remember { mutableStateOf(gasto.importe.toString()) }
     var notas by remember { mutableStateOf(gasto.notas ?: "") }
     var categoriaSeleccionada by remember { mutableStateOf(gasto.categoria) }
-    var error by remember { mutableStateOf("") }
+    var errorGeneral by remember { mutableStateOf("") }
     var expandedCategoria by remember { mutableStateOf(false) }
+
+    // Validaciones en tiempo real
+    val errorConcepto = if (concepto.isNotBlank() && concepto.length < 3)
+        "El concepto debe tener al menos 3 caracteres" else ""
+    val errorImporte = if (importe.isBlank()) ""
+    else if (importe.toDoubleOrNull() == null) "Introduce un número válido"
+    else if (importe.toDouble() <= 0) "El importe debe ser mayor que 0"
+    else ""
 
     val categorias = listOf("ALOJAMIENTO", "TRANSPORTE", "COMIDA", "OCIO", "OTROS")
 
@@ -71,7 +79,11 @@ fun EditarGastoScreen(
                 label = { Text("Concepto *") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                colors = tripTextFieldColors()
+                colors = tripTextFieldColors(),
+                isError = errorConcepto.isNotEmpty(),
+                supportingText = if (errorConcepto.isNotEmpty()) {
+                    { Text(errorConcepto, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                } else null
             )
 
             OutlinedTextField(
@@ -80,7 +92,11 @@ fun EditarGastoScreen(
                 label = { Text("Importe (€) *") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                colors = tripTextFieldColors()
+                colors = tripTextFieldColors(),
+                isError = errorImporte.isNotEmpty(),
+                supportingText = if (errorImporte.isNotEmpty()) {
+                    { Text(errorImporte, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                } else null
             )
 
             ExposedDropdownMenuBox(
@@ -125,18 +141,18 @@ fun EditarGastoScreen(
                 colors = tripTextFieldColors()
             )
 
-            if (error.isNotEmpty()) {
-                Text(text = error, color = MaterialTheme.colorScheme.error)
+            if (errorGeneral.isNotEmpty()) {
+                Text(text = errorGeneral, color = MaterialTheme.colorScheme.error)
             }
 
             Button(
                 onClick = {
                     when {
-                        concepto.isBlank() -> error = "El concepto es obligatorio"
-                        importe.isBlank() -> error = "El importe es obligatorio"
-                        importe.toDoubleOrNull() == null -> error = "El importe debe ser un número"
-                        importe.toDouble() <= 0 -> error = "El importe debe ser mayor que 0"
+                        concepto.isBlank() -> errorGeneral = "El concepto es obligatorio"
+                        importe.isBlank() -> errorGeneral = "El importe es obligatorio"
+                        errorImporte.isNotEmpty() -> errorGeneral = errorImporte
                         else -> {
+                            errorGeneral = ""
                             viewModel.actualizarGasto(
                                 gasto.copy(
                                     concepto = concepto,

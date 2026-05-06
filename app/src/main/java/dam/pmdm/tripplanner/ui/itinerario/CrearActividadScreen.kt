@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vanpra.composematerialdialogs.MaterialDialog
 import com.vanpra.composematerialdialogs.datetime.date.datepicker
 import com.vanpra.composematerialdialogs.datetime.time.timepicker
@@ -36,11 +37,18 @@ fun CrearActividadScreen(
     var titulo by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var lugar by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf("") }
+    var errorGeneral by remember { mutableStateOf("") }
 
     var fechaSeleccionada by remember { mutableStateOf<LocalDate?>(null) }
     var horaInicioSeleccionada by remember { mutableStateOf<LocalTime?>(null) }
     var horaFinSeleccionada by remember { mutableStateOf<LocalTime?>(null) }
+
+    // Validaciones en tiempo real
+    val errorTitulo = if (titulo.isNotBlank() && titulo.length < 3)
+        "El título debe tener al menos 3 caracteres" else ""
+    val errorHoras = if (horaInicioSeleccionada != null && horaFinSeleccionada != null &&
+        horaFinSeleccionada!!.isBefore(horaInicioSeleccionada))
+        "La hora de fin debe ser posterior a la de inicio" else ""
 
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -130,7 +138,11 @@ fun CrearActividadScreen(
                 label = { Text("Título *") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                colors = tripTextFieldColors()
+                colors = tripTextFieldColors(),
+                isError = errorTitulo.isNotEmpty(),
+                supportingText = if (errorTitulo.isNotEmpty()) {
+                    { Text(errorTitulo, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                } else null
             )
 
             OutlinedTextField(
@@ -175,7 +187,11 @@ fun CrearActividadScreen(
                     }
                 },
                 shape = MaterialTheme.shapes.medium,
-                colors = tripTextFieldColors()
+                colors = tripTextFieldColors(),
+                isError = errorHoras.isNotEmpty(),
+                supportingText = if (errorHoras.isNotEmpty()) {
+                    { Text(errorHoras, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+                } else null
             )
 
             OutlinedTextField(
@@ -197,16 +213,18 @@ fun CrearActividadScreen(
                 colors = tripTextFieldColors()
             )
 
-            if (error.isNotEmpty()) {
-                Text(text = error, color = MaterialTheme.colorScheme.error)
+            if (errorGeneral.isNotEmpty()) {
+                Text(text = errorGeneral, color = MaterialTheme.colorScheme.error)
             }
 
             Button(
                 onClick = {
                     when {
-                        titulo.isBlank() -> error = "El título es obligatorio"
-                        fechaSeleccionada == null -> error = "La fecha es obligatoria"
+                        titulo.isBlank() -> errorGeneral = "El título es obligatorio"
+                        fechaSeleccionada == null -> errorGeneral = "La fecha es obligatoria"
+                        errorHoras.isNotEmpty() -> errorGeneral = errorHoras
                         else -> {
+                            errorGeneral = ""
                             val fechaLong = fechaSeleccionada!!
                                 .atStartOfDay(ZoneId.systemDefault())
                                 .toInstant().toEpochMilli()
