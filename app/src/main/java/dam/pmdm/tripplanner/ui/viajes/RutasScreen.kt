@@ -1,10 +1,7 @@
 package dam.pmdm.tripplanner.ui.viajes
 
 import android.os.Bundle
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,35 +13,95 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.firebase.firestore.FirebaseFirestore
 import org.maplibre.android.MapLibre
+import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapView
 import dam.pmdm.tripplanner.BuildConfig
 import dam.pmdm.tripplanner.ui.theme.*
-import kotlinx.coroutines.tasks.await
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RutasScreen(
     idViaje: String,
     paisDestino: String
 ) {
-    val context = LocalContext.current
     val apiKey = BuildConfig.MAPTILER_API_KEY
     val styleUrl = "https://api.maptiler.com/maps/streets/style.json?key=$apiKey"
 
     var mostrarDialogoAñadir by remember { mutableStateOf(false) }
     var nombrePunto by remember { mutableStateOf("") }
+    var descripcionPunto by remember { mutableStateOf("") }
+    var categoriaSeleccionada by remember { mutableStateOf("ATRACCION") }
+    var expandedCategoria by remember { mutableStateOf(false) }
     var latitudSeleccionada by remember { mutableStateOf(0.0) }
     var longitudSeleccionada by remember { mutableStateOf(0.0) }
+    var contadorPuntos by remember { mutableStateOf(0) }
     var error by remember { mutableStateOf("") }
     var mapRef by remember { mutableStateOf<org.maplibre.android.maps.MapLibreMap?>(null) }
+    var marcadorSeleccionado by remember { mutableStateOf<Marker?>(null) }
 
+    val categorias = listOf("ATRACCION", "RESTAURANTE", "HOTEL", "MUSEO", "MONUMENTO", "OTRO")
+
+    // Diálogo opciones marcador seleccionado
+    marcadorSeleccionado?.let { marker ->
+        AlertDialog(
+            onDismissRequest = { marcadorSeleccionado = null },
+            title = { Text(marker.title ?: "Punto de interés", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    if (!marker.snippet.isNullOrBlank()) {
+                        Text(
+                            text = marker.snippet,
+                            color = TripBlue,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "¿Qué quieres hacer con este punto?",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        FirebaseFirestore.getInstance()
+                            .collection("viajes").document(idViaje)
+                            .collection("puntos_interes")
+                            .whereEqualTo("nombre", marker.title)
+                            .get()
+                            .addOnSuccessListener { snapshot ->
+                                snapshot.documents.forEach { it.reference.delete() }
+                            }
+                        mapRef?.removeMarker(marker)
+                        contadorPuntos--
+                        marcadorSeleccionado = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { marcadorSeleccionado = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo añadir punto
     if (mostrarDialogoAñadir) {
         AlertDialog(
             onDismissRequest = {
                 mostrarDialogoAñadir = false
                 nombrePunto = ""
+                descripcionPunto = ""
                 error = ""
             },
             title = { Text("Añadir punto de interés", fontWeight = FontWeight.Bold) },
@@ -64,6 +121,47 @@ fun RutasScreen(
                         shape = MaterialTheme.shapes.medium,
                         colors = tripTextFieldColors()
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ExposedDropdownMenuBox(
+                        expanded = expandedCategoria,
+                        onExpandedChange = { expandedCategoria = it }
+                    ) {
+                        OutlinedTextField(
+                            value = categoriaSeleccionada,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Categoría") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategoria) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            shape = MaterialTheme.shapes.medium,
+                            colors = tripTextFieldColors()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedCategoria,
+                            onDismissRequest = { expandedCategoria = false }
+                        ) {
+                            categorias.forEach { categoria ->
+                                DropdownMenuItem(
+                                    text = { Text(categoria) },
+                                    onClick = {
+                                        categoriaSeleccionada = categoria
+                                        expandedCategoria = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = descripcionPunto,
+                        onValueChange = { descripcionPunto = it },
+                        label = { Text("Descripción") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = tripTextFieldColors()
+                    )
                     if (error.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(text = error, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
@@ -76,27 +174,31 @@ fun RutasScreen(
                         if (nombrePunto.isBlank()) {
                             error = "El nombre es obligatorio"
                         } else {
-                            // Guardar en Firestore
                             val punto = mapOf(
                                 "idPunto" to java.util.UUID.randomUUID().toString(),
                                 "nombre" to nombrePunto,
+                                "categoria" to categoriaSeleccionada,
+                                "descripcion" to descripcionPunto.ifBlank { null },
                                 "latitud" to latitudSeleccionada,
-                                "longitud" to longitudSeleccionada
+                                "longitud" to longitudSeleccionada,
+                                "orden" to contadorPuntos + 1
                             )
                             FirebaseFirestore.getInstance()
                                 .collection("viajes").document(idViaje)
                                 .collection("puntos_interes")
                                 .add(punto)
 
-                            // Añadir marcador al mapa
                             mapRef?.addMarker(
                                 MarkerOptions()
                                     .position(LatLng(latitudSeleccionada, longitudSeleccionada))
                                     .title(nombrePunto)
+                                    .snippet(categoriaSeleccionada)
                             )
 
+                            contadorPuntos++
                             mostrarDialogoAñadir = false
                             nombrePunto = ""
+                            descripcionPunto = ""
                             error = ""
                         }
                     },
@@ -109,6 +211,7 @@ fun RutasScreen(
                 TextButton(onClick = {
                     mostrarDialogoAñadir = false
                     nombrePunto = ""
+                    descripcionPunto = ""
                     error = ""
                 }) {
                     Text("Cancelar")
@@ -126,30 +229,37 @@ fun RutasScreen(
                 mapView.getMapAsync { map ->
                     mapRef = map
                     map.setStyle(styleUrl) {
-                        // Cargar puntos existentes de Firestore
                         FirebaseFirestore.getInstance()
                             .collection("viajes").document(idViaje)
                             .collection("puntos_interes")
                             .get()
                             .addOnSuccessListener { snapshot ->
+                                contadorPuntos = snapshot.size()
                                 snapshot.documents.forEach { doc ->
                                     val lat = doc.getDouble("latitud") ?: return@forEach
                                     val lng = doc.getDouble("longitud") ?: return@forEach
                                     val nombre = doc.getString("nombre") ?: ""
+                                    val categoria = doc.getString("categoria") ?: ""
                                     map.addMarker(
                                         MarkerOptions()
                                             .position(LatLng(lat, lng))
                                             .title(nombre)
+                                            .snippet(categoria)
                                     )
                                 }
                             }
                     }
+
                     map.cameraPosition = CameraPosition.Builder()
                         .target(LatLng(40.4168, -3.7038))
                         .zoom(5.0)
                         .build()
 
-                    // Detectar tap en el mapa
+                    map.setOnMarkerClickListener { marker ->
+                        marcadorSeleccionado = marker
+                        true
+                    }
+
                     map.addOnMapClickListener { point ->
                         latitudSeleccionada = point.latitude
                         longitudSeleccionada = point.longitude
@@ -162,7 +272,6 @@ fun RutasScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Instrucción
         Card(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -172,10 +281,10 @@ fun RutasScreen(
             )
         ) {
             Text(
-                text = "📍 Pulsa en el mapa para añadir un punto",
+                text = "📍 Pulsa en el mapa para añadir · Pulsa un marcador para eliminar",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 color = androidx.compose.ui.graphics.Color.White,
-                fontSize = 13.sp
+                fontSize = 12.sp
             )
         }
     }
