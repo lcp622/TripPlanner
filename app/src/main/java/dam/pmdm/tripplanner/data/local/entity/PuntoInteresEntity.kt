@@ -8,17 +8,17 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "PUNTO_INTERES",
     foreignKeys = [ForeignKey(
-        entity = RutaEntity::class,
-        parentColumns = ["idRuta"],
-        childColumns = ["idRuta"],
+        entity = ViajeEntity::class,
+        parentColumns = ["idViaje"],
+        childColumns = ["idViaje"],
         onDelete = ForeignKey.CASCADE
     )],
-    indices = [Index("idRuta")]
+    indices = [Index("idViaje")]
 )
 data class PuntoInteresEntity(
     @PrimaryKey
     val idPunto: String,
-    val idRuta: String,
+    val idViaje: String,
     val nombre: String,
     val categoria: String? = null,
     val latitud: Double,

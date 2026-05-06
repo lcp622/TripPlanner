@@ -12,14 +12,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.firebase.firestore.FirebaseFirestore
+import dam.pmdm.tripplanner.BuildConfig
+import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
+import dam.pmdm.tripplanner.data.local.entity.PuntoInteresEntity
+import dam.pmdm.tripplanner.ui.theme.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapView
-import dam.pmdm.tripplanner.BuildConfig
-import dam.pmdm.tripplanner.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,6 +31,7 @@ fun RutasScreen(
     idViaje: String,
     paisDestino: String
 ) {
+    val context = LocalContext.current
     val apiKey = BuildConfig.MAPTILER_API_KEY
     val styleUrl = "https://api.maptiler.com/maps/streets/style.json?key=$apiKey"
 
@@ -70,13 +75,24 @@ fun RutasScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        val nombreMarker = marker.title
+                        // Eliminar de Firestore
                         FirebaseFirestore.getInstance()
                             .collection("viajes").document(idViaje)
                             .collection("puntos_interes")
-                            .whereEqualTo("nombre", marker.title)
+                            .whereEqualTo("nombre", nombreMarker)
                             .get()
                             .addOnSuccessListener { snapshot ->
-                                snapshot.documents.forEach { it.reference.delete() }
+                                snapshot.documents.forEach { doc ->
+                                    val idPunto = doc.getString("idPunto") ?: doc.id
+                                    doc.reference.delete()
+                                    // Eliminar de Room
+                                    GlobalScope.launch {
+                                        TripPlannerDatabase.getInstance(context)
+                                            .puntoInteresDao()
+                                            .eliminarPorId(idPunto)
+                                    }
+                                }
                             }
                         mapRef?.removeMarker(marker)
                         contadorPuntos--
@@ -174,19 +190,42 @@ fun RutasScreen(
                         if (nombrePunto.isBlank()) {
                             error = "El nombre es obligatorio"
                         } else {
-                            val punto = mapOf(
-                                "idPunto" to java.util.UUID.randomUUID().toString(),
+                            val idPunto = java.util.UUID.randomUUID().toString()
+                            val orden = contadorPuntos + 1
+
+                            val puntoFirestore = mapOf(
+                                "idPunto" to idPunto,
                                 "nombre" to nombrePunto,
                                 "categoria" to categoriaSeleccionada,
                                 "descripcion" to descripcionPunto.ifBlank { null },
                                 "latitud" to latitudSeleccionada,
                                 "longitud" to longitudSeleccionada,
-                                "orden" to contadorPuntos + 1
+                                "orden" to orden
                             )
+
+                            // Guardar en Firestore
                             FirebaseFirestore.getInstance()
                                 .collection("viajes").document(idViaje)
                                 .collection("puntos_interes")
-                                .add(punto)
+                                .add(puntoFirestore)
+
+                            // Guardar en Room
+                            GlobalScope.launch {
+                                TripPlannerDatabase.getInstance(context)
+                                    .puntoInteresDao()
+                                    .insertar(
+                                        PuntoInteresEntity(
+                                            idPunto = idPunto,
+                                            idViaje = idViaje,
+                                            nombre = nombrePunto,
+                                            categoria = categoriaSeleccionada,
+                                            descripcion = descripcionPunto.ifBlank { null },
+                                            latitud = latitudSeleccionada,
+                                            longitud = longitudSeleccionada,
+                                            orden = orden
+                                        )
+                                    )
+                            }
 
                             mapRef?.addMarker(
                                 MarkerOptions()
@@ -229,6 +268,7 @@ fun RutasScreen(
                 mapView.getMapAsync { map ->
                     mapRef = map
                     map.setStyle(styleUrl) {
+                        // Cargar desde Firestore y sincronizar con Room
                         FirebaseFirestore.getInstance()
                             .collection("viajes").document(idViaje)
                             .collection("puntos_interes")
@@ -240,6 +280,28 @@ fun RutasScreen(
                                     val lng = doc.getDouble("longitud") ?: return@forEach
                                     val nombre = doc.getString("nombre") ?: ""
                                     val categoria = doc.getString("categoria") ?: ""
+                                    val descripcion = doc.getString("descripcion")
+                                    val idPunto = doc.getString("idPunto") ?: doc.id
+                                    val orden = doc.getLong("orden")?.toInt() ?: 0
+
+                                    // Guardar en Room
+                                    GlobalScope.launch {
+                                        TripPlannerDatabase.getInstance(ctx)
+                                            .puntoInteresDao()
+                                            .insertar(
+                                                PuntoInteresEntity(
+                                                    idPunto = idPunto,
+                                                    idViaje = idViaje,
+                                                    nombre = nombre,
+                                                    categoria = categoria,
+                                                    descripcion = descripcion,
+                                                    latitud = lat,
+                                                    longitud = lng,
+                                                    orden = orden
+                                                )
+                                            )
+                                    }
+
                                     map.addMarker(
                                         MarkerOptions()
                                             .position(LatLng(lat, lng))
