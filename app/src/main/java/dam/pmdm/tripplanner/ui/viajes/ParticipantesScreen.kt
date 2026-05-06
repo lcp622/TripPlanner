@@ -34,6 +34,7 @@ fun ParticipantesScreen(
     val participantes by repository.obtenerParticipantes(idViaje).collectAsState(initial = emptyList())
 
     var mostrarDialogoAñadir by remember { mutableStateOf(false) }
+    var mostrarLimiteAlcanzado by remember { mutableStateOf(false) }
     var emailNuevo by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
     var participanteAEliminar by remember { mutableStateOf<Map<String, Any>?>(null) }
@@ -51,6 +52,20 @@ fun ParticipantesScreen(
             }
             else -> {}
         }
+    }
+
+    // Diálogo límite alcanzado
+    if (mostrarLimiteAlcanzado) {
+        AlertDialog(
+            onDismissRequest = { mostrarLimiteAlcanzado = false },
+            title = { Text("Límite alcanzado", fontWeight = FontWeight.Bold) },
+            text = { Text("Un viaje puede tener un máximo de 5 participantes.") },
+            confirmButton = {
+                TextButton(onClick = { mostrarLimiteAlcanzado = false }) {
+                    Text("Entendido")
+                }
+            }
+        )
     }
 
     // Diálogo añadir participante
@@ -167,7 +182,7 @@ fun ParticipantesScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Pulsa + para añadir participantes",
+                    text = "Pulsa + para añadir participantes (máx. 5)",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -179,6 +194,16 @@ fun ParticipantesScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                item {
+                    Text(
+                        text = "${participantes.size}/5 participantes",
+                        fontSize = 12.sp,
+                        color = if (participantes.size >= 5) MaterialTheme.colorScheme.error else TripTextSecondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
                 items(participantes) { participante ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -248,11 +273,17 @@ fun ParticipantesScreen(
         }
 
         FloatingActionButton(
-            onClick = { mostrarDialogoAñadir = true },
+            onClick = {
+                if (participantes.size >= 5) {
+                    mostrarLimiteAlcanzado = true
+                } else {
+                    mostrarDialogoAñadir = true
+                }
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
-            containerColor = TripBlue
+            containerColor = if (participantes.size >= 5) TripGray else TripBlue
         ) {
             Icon(Icons.Default.Add, contentDescription = "Añadir participante")
         }
