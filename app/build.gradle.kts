@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "dam.pmdm.tripplanner"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "dam.pmdm.tripplanner"
-        minSdk = 24
-        targetSdk = 36
+        minSdk = 26
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -52,8 +52,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
-    implementation("io.github.vanpra.compose-material-dialogs:datetime:0.9.0")
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation(libs.compose.material.dialogs)
+    implementation(libs.androidx.work)
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))

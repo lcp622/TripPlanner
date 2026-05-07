@@ -70,7 +70,6 @@ class ActividadViewModel(private val repository: ActividadRepository) : ViewMode
         }
     }
 }
-
 class ActividadViewModelFactory(private val repository: ActividadRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ActividadViewModel::class.java)) {

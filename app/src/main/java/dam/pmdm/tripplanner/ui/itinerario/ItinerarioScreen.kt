@@ -89,7 +89,7 @@ fun ItinerarioScreen(
                     ) {
                         actividadesPorDia.entries.forEachIndexed { diaIndex, (_, actividades) ->
                             val fecha = actividades.first().fecha
-                            val dateFormat = SimpleDateFormat("EEEE, dd MMM", Locale("es", "ES"))
+                            val dateFormat = SimpleDateFormat("EEEE, dd MMM", Locale.forLanguageTag("es-ES"))
 
                             item {
                                 Text(
@@ -133,18 +133,18 @@ fun ActividadCard(
     onEliminar: () -> Unit,
     onEditar: () -> Unit
 ) {
-    var mostrarDialogo by remember { mutableStateOf(false) }
+    val mostrarDialogo = remember { mutableStateOf(false) }
 
-    if (mostrarDialogo) {
+    if (mostrarDialogo.value) {
         AlertDialog(
-            onDismissRequest = { mostrarDialogo = false },
+            onDismissRequest = { mostrarDialogo.value = false },
             title = { Text("Eliminar actividad", fontWeight = FontWeight.Bold) },
             text = { Text("¿Estás segura de que quieres eliminar \"${actividad.titulo}\"?") },
             confirmButton = {
                 Button(
                     onClick = {
                         onEliminar()
-                        mostrarDialogo = false
+                        mostrarDialogo.value = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -152,7 +152,7 @@ fun ActividadCard(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { mostrarDialogo = false }) {
+                TextButton(onClick = { mostrarDialogo.value = false }) {
                     Text("Cancelar")
                 }
             }
@@ -231,7 +231,7 @@ fun ActividadCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                IconButton(onClick = { mostrarDialogo = true }) {
+                IconButton(onClick = { mostrarDialogo.value = true }) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Eliminar",
