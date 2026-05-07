@@ -10,11 +10,13 @@ import dam.pmdm.tripplanner.data.local.dao.*
 import dam.pmdm.tripplanner.data.local.entity.*
 
 class Converters {
+    @Suppress("unused")
     @TypeConverter
     fun fromString(value: String?): List<String> {
         return value?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
     }
 
+    @Suppress("unused")
     @TypeConverter
     fun fromList(list: List<String>?): String {
         return list?.joinToString(",") ?: ""

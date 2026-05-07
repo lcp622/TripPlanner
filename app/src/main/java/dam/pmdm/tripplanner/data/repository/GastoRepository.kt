@@ -42,38 +42,11 @@ class GastoRepository(private val gastoDao: GastoDao) {
         gastoDao.actualizar(gasto)
     }
 
-    fun obtenerTodosLosGastos(idViajes: List<String>): Flow<List<GastoEntity>> = callbackFlow {
-        if (idViajes.isEmpty()) {
-            trySend(emptyList())
-            awaitClose {}
-            return@callbackFlow
-        }
-
-        val listener = db.collection("viajes")
-            .whereIn("idViaje", idViajes)
-            .addSnapshotListener { _, _ -> }
-
-        // Obtenemos los gastos de cada viaje
-        val listeners = idViajes.map { idViaje ->
-            coleccionGastos(idViaje).addSnapshotListener { snapshot, error ->
-                if (error != null) return@addSnapshotListener
-                val gastos = snapshot?.documents?.mapNotNull { it.toObject(GastoEntity::class.java) } ?: emptyList()
-                trySend(gastos)
-            }
-        }
-
-        awaitClose {
-            listener.remove()
-            listeners.forEach { it.remove() }
-        }
-    }
-
     suspend fun crearRepartoGasto(idViaje: String, gasto: GastoEntity, participantes: List<Map<String, Any>>) {
-        val importePorPersona = gasto.importe / participantes.size // +1 por el pagador
+        val importePorPersona = gasto.importe / participantes.size
 
         participantes.forEach { participante ->
             val idUsuario = participante["idUsuario"]?.toString() ?: return@forEach
-            // El pagador no se debe a sí mismo
             if (idUsuario == gasto.idPagador) return@forEach
 
             val reparto = mapOf(

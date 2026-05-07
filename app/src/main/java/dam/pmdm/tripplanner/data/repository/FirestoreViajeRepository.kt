@@ -1,6 +1,7 @@
 package dam.pmdm.tripplanner.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import dam.pmdm.tripplanner.data.local.dao.ViajeDao
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
@@ -31,7 +32,6 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
             trySend(todos)
         }
 
-        // Viajes propios
         val listenerPropios = coleccionViajes
             .whereEqualTo("idPropietario", idUsuario)
             .addSnapshotListener { snapshot, error ->
@@ -49,7 +49,6 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
                 emitirCombinados()
             }
 
-        // Viajes donde es participante
         val listenerParticipante = coleccionViajes
             .whereArrayContains("participantesIds", idUsuario)
             .addSnapshotListener { snapshot, error ->
@@ -73,7 +72,6 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
         }
     }
 
-    // Guardar viaje en Firestore y Room
     suspend fun crearViaje(viaje: ViajeEntity) {
         val user = auth.currentUser ?: return
         val usuarioDoc = db.collection("usuarios").document(user.uid).get().await()
@@ -83,7 +81,6 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
         coleccionViajes.document(viaje.idViaje).set(viajeConNombre).await()
         viajeDao.insertar(viajeConNombre)
 
-        // Añadir al propietario como participante admin
         val email = user.email ?: ""
         val participante = mapOf(
             "idUsuario" to user.uid,
@@ -99,21 +96,17 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
             .set(participante).await()
     }
 
-    // Actualizar viaje en Firestore y Room
     suspend fun actualizarViaje(viaje: ViajeEntity) {
         coleccionViajes.document(viaje.idViaje).set(viaje).await()
         viajeDao.actualizar(viaje)
     }
 
-    // Eliminar viaje en Firestore y Room
     suspend fun eliminarViaje(idViaje: String) {
         val viajeRef = coleccionViajes.document(idViaje)
 
-        // Borrar subcolecciones
         listOf("actividades", "gastos", "participantes", "puntos_interes").forEach { subcoleccion ->
             val docs = viajeRef.collection(subcoleccion).get().await()
             docs.documents.forEach { doc ->
-                // Borrar sub-subcolecciones de gastos (repartos)
                 if (subcoleccion == "gastos") {
                     val repartos = doc.reference.collection("repartos").get().await()
                     repartos.documents.forEach { it.reference.delete().await() }
@@ -122,19 +115,13 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
             }
         }
 
-        // Borrar el viaje
         viajeRef.delete().await()
         viajeDao.eliminarPorId(idViaje)
-    }
-
-    suspend fun obtenerViajePorId(idViaje: String): ViajeEntity? {
-        return viajeDao.obtenerPorId(idViaje)
     }
 
     suspend fun obtenerViajePorIdFirestore(idViaje: String): ViajeEntity? {
         val ahora = System.currentTimeMillis()
 
-        // Primero intentar desde Room pero recalculando el estado
         val local = viajeDao.obtenerPorId(idViaje)
         if (local != null) {
             val estado = when {
@@ -145,7 +132,6 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
             return local.copy(estado = estado)
         }
 
-        // Si no está en Room, buscar en Firestore
         return try {
             val doc = coleccionViajes.document(idViaje).get().await()
             doc.toObject(ViajeEntity::class.java)?.let { viaje ->
@@ -158,12 +144,12 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
                 viajeDao.insertar(viajeActualizado)
                 viajeActualizado
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
 
-    suspend fun añadirParticipante(idViaje: String, email: String): Result<Unit> {
+    suspend fun anadirParticipante(idViaje: String, email: String): Result<Unit> {
         return try {
             val usuarioSnapshot = db.collection("usuarios")
                 .whereEqualTo("email", email)
@@ -189,9 +175,8 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
                 .document(idUsuario)
                 .set(participante).await()
 
-            // Añadir idUsuario al array participantesIds del viaje
             db.collection("viajes").document(idViaje)
-                .update("participantesIds", com.google.firebase.firestore.FieldValue.arrayUnion(idUsuario))
+                .update("participantesIds", FieldValue.arrayUnion(idUsuario))
                 .await()
 
             Result.success(Unit)
@@ -213,15 +198,13 @@ class FirestoreViajeRepository(private val viajeDao: ViajeDao) {
 
     suspend fun eliminarParticipante(idViaje: String, idUsuario: String): Result<Unit> {
         return try {
-            // Eliminar de la subcolección participantes
             db.collection("viajes").document(idViaje)
                 .collection("participantes")
                 .document(idUsuario)
                 .delete().await()
 
-            // Eliminar del array participantesIds
             db.collection("viajes").document(idViaje)
-                .update("participantesIds", com.google.firebase.firestore.FieldValue.arrayRemove(idUsuario))
+                .update("participantesIds", FieldValue.arrayRemove(idUsuario))
                 .await()
 
             Result.success(Unit)

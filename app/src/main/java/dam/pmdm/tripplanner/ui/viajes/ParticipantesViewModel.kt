@@ -23,7 +23,7 @@ class ParticipantesViewModel(private val repository: FirestoreViajeRepository) :
     fun añadirParticipante(idViaje: String, email: String) {
         viewModelScope.launch {
             _uiState.value = ParticipanteUiState.Loading
-            val resultado = repository.añadirParticipante(idViaje, email)
+            val resultado = repository.anadirParticipante(idViaje, email)
             _uiState.value = if (resultado.isSuccess) {
                 ParticipanteUiState.Success
             } else {

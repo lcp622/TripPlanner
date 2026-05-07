@@ -3,17 +3,16 @@ package dam.pmdm.tripplanner.data.repository
 import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.firestore.FirebaseFirestore
+import androidx.core.net.toUri
 import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
 import dam.pmdm.tripplanner.data.local.entity.UsuarioEntity
 import kotlinx.coroutines.tasks.await
-import com.google.firebase.firestore.FirebaseFirestore
 
 class AuthRepository(private val context: Context) {
 
     private val auth = FirebaseAuth.getInstance()
-
-    val usuarioActual: FirebaseUser?
-        get() = auth.currentUser
 
     val estaAutenticado: Boolean
         get() = auth.currentUser != null
@@ -22,8 +21,7 @@ class AuthRepository(private val context: Context) {
         return try {
             val resultado = auth.createUserWithEmailAndPassword(email, password).await()
             val user = resultado.user!!
-            // Actualizar el nombre en Firebase Auth
-            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+            val profileUpdates = UserProfileChangeRequest.Builder()
                 .setDisplayName(nombre)
                 .build()
             user.updateProfile(profileUpdates).await()
@@ -58,7 +56,6 @@ class AuthRepository(private val context: Context) {
         )
         db.usuarioDao().insertar(usuario)
 
-        // Guardar también en Firestore para poder buscar por email
         val firestore = FirebaseFirestore.getInstance()
         val usuarioMap = mapOf(
             "idUsuario" to user.uid,
@@ -74,25 +71,32 @@ class AuthRepository(private val context: Context) {
     suspend fun actualizarPerfil(nombre: String, fotoUrl: String?): Result<Unit> {
         return try {
             val user = auth.currentUser ?: return Result.failure(Exception("No hay usuario"))
-            val profileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
+            val profileUpdates = UserProfileChangeRequest.Builder()
                 .setDisplayName(nombre)
                 .apply {
                     if (fotoUrl != null) {
-                        photoUri = android.net.Uri.parse(fotoUrl)
+                        photoUri = fotoUrl.toUri()
                     }
                 }
                 .build()
             user.updateProfile(profileUpdates).await()
 
             // Actualizar en Firestore
+            val firestore = FirebaseFirestore.getInstance()
+            firestore.collection("usuarios").document(user.uid)
+                .update("nombre", nombre, "fotoUrl", fotoUrl)
+                .await()
+
+            // Actualizar en Room
             val db = TripPlannerDatabase.getInstance(context)
-            val usuario = db.usuarioDao().obtenerPorId(user.uid)
-            if (usuario != null) {
-                db.usuarioDao().actualizar(usuario.copy(
-                    nombre = nombre,
-                    fotoUrl = fotoUrl
-                ))
-            }
+            val usuario = UsuarioEntity(
+                idUsuario = user.uid,
+                nombre = nombre,
+                email = user.email ?: "",
+                fotoUrl = fotoUrl
+            )
+            db.usuarioDao().insertar(usuario)
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
