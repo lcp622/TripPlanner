@@ -3,10 +3,7 @@ package dam.pmdm.tripplanner.ui.perfil
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +20,8 @@ import dam.pmdm.tripplanner.ui.auth.AuthUiState
 import dam.pmdm.tripplanner.ui.auth.AuthViewModel
 import dam.pmdm.tripplanner.ui.theme.*
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,7 +57,7 @@ fun EditarPerfilScreen(
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
@@ -82,7 +81,6 @@ fun EditarPerfilScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-// Avatar preview
             Box(
                 modifier = Modifier
                     .size(100.dp)

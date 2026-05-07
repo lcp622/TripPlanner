@@ -9,7 +9,6 @@ val TripBlueDark = Color(0xFF1565C0)
 
 // Acento
 val TripOrange = Color(0xFFFF7043)
-val TripOrangeLight = Color(0xFFFFAB91)
 
 // Neutros
 val TripWhite = Color(0xFFFFFFFF)
@@ -20,8 +19,6 @@ val TripGrayLight = Color(0xFFEEEEEE)
 val TripTextPrimary = Color(0xFF212121)
 val TripTextSecondary = Color(0xFF757575)
 
-// Estados viaje
-// Estados viaje
 val ColorPlanificado = Color(0xFF2196F3)  // Azul
 val ColorEnCurso = Color(0xFFFF9800)      // Naranja/Amarillo
 val ColorFinalizado = Color(0xFFE53935)   // Rojo

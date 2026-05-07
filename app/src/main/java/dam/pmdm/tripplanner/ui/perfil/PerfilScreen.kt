@@ -33,19 +33,19 @@ fun PerfilScreen(
 ) {
     val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
     val user = FirebaseAuth.getInstance().currentUser
-    var mostrarDialogoCerrarSesion by remember { mutableStateOf(false) }
-    var mostrarDialogoBorrarCuenta by remember { mutableStateOf(false) }
-    var errorBorrar by remember { mutableStateOf("") }
+    val mostrarDialogoCerrarSesion = remember { mutableStateOf(false) }
+    val mostrarDialogoBorrarCuenta = remember { mutableStateOf(false) }
+    val errorBorrar = remember { mutableStateOf("") }
 
-    if (mostrarDialogoCerrarSesion) {
+    if (mostrarDialogoCerrarSesion.value) {
         AlertDialog(
-            onDismissRequest = { mostrarDialogoCerrarSesion = false },
+            onDismissRequest = { mostrarDialogoCerrarSesion.value = false },
             title = { Text("Cerrar sesión", fontWeight = FontWeight.Bold) },
             text = { Text("¿Estás segura de que quieres cerrar sesión?") },
             confirmButton = {
                 Button(
                     onClick = {
-                        mostrarDialogoCerrarSesion = false
+                        mostrarDialogoCerrarSesion.value = false
                         onCerrarSesion()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = TripBlue)
@@ -54,27 +54,27 @@ fun PerfilScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { mostrarDialogoCerrarSesion = false }) {
+                TextButton(onClick = { mostrarDialogoCerrarSesion.value = false }) {
                     Text("Cancelar")
                 }
             }
         )
     }
 
-    if (mostrarDialogoBorrarCuenta) {
+    if (mostrarDialogoBorrarCuenta.value) {
         AlertDialog(
             onDismissRequest = {
-                mostrarDialogoBorrarCuenta = false
-                errorBorrar = ""
+                mostrarDialogoBorrarCuenta.value = false
+                errorBorrar.value = ""
             },
             title = { Text("Eliminar cuenta", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text("¿Estás segura de que quieres eliminar tu cuenta? Esta acción no se puede deshacer y perderás todos tus datos.")
-                    if (errorBorrar.isNotEmpty()) {
+                    if (errorBorrar.value.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = errorBorrar,
+                            text = errorBorrar.value,
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp
                         )
@@ -87,10 +87,8 @@ fun PerfilScreen(
                         val uid = user?.uid ?: return@Button
                         val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
 
-                        // Borrar usuario de Firestore
                         db.collection("usuarios").document(uid).delete()
 
-                        // Borrar viajes propios y sus subcolecciones
                         db.collection("viajes")
                             .whereEqualTo("idPropietario", uid)
                             .get()
@@ -108,12 +106,12 @@ fun PerfilScreen(
 
                         // Eliminar cuenta de Firebase Auth
                         user.delete()
-                            ?.addOnSuccessListener {
-                                mostrarDialogoBorrarCuenta = false
+                            .addOnSuccessListener {
+                                mostrarDialogoBorrarCuenta.value = false
                                 onCerrarSesion()
                             }
-                            ?.addOnFailureListener { e ->
-                                errorBorrar = if (e.message?.contains("recent") == true) {
+                            .addOnFailureListener { e ->
+                                errorBorrar.value = if (e.message?.contains("recent") == true) {
                                     "Por seguridad, cierra sesión y vuelve a iniciarla antes de eliminar la cuenta."
                                 } else {
                                     "Error al eliminar la cuenta: ${e.message}"
@@ -127,8 +125,8 @@ fun PerfilScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
-                    mostrarDialogoBorrarCuenta = false
-                    errorBorrar = ""
+                    mostrarDialogoBorrarCuenta.value = false
+                    errorBorrar.value = ""
                 }) {
                     Text("Cancelar")
                 }
@@ -261,7 +259,7 @@ fun PerfilScreen(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(2.dp),
             modifier = Modifier.fillMaxWidth(),
-            onClick = { mostrarDialogoCerrarSesion = true }
+            onClick = { mostrarDialogoCerrarSesion.value = true }
         ) {
             Row(
                 modifier = Modifier
@@ -290,7 +288,7 @@ fun PerfilScreen(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(2.dp),
             modifier = Modifier.fillMaxWidth(),
-            onClick = { mostrarDialogoBorrarCuenta = true }
+            onClick = { mostrarDialogoBorrarCuenta.value = true }
         ) {
             Row(
                 modifier = Modifier
