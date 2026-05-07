@@ -9,10 +9,4 @@ interface UsuarioDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertar(usuario: UsuarioEntity)
 
-    @Update
-    suspend fun actualizar(usuario: UsuarioEntity)
-
-    @Query("SELECT * FROM USUARIO WHERE idUsuario = :idUsuario")
-    suspend fun obtenerPorId(idUsuario: String): UsuarioEntity?
-
 }

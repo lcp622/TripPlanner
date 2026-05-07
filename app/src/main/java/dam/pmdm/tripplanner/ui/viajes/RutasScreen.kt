@@ -31,6 +31,7 @@ import org.maplibre.android.plugins.annotation.SymbolManager
 import org.maplibre.android.plugins.annotation.SymbolOptions
 import java.util.UUID
 import androidx.compose.ui.platform.LocalLocale
+import org.maplibre.android.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -289,7 +290,7 @@ fun RutasScreen(
                     map.setStyle(styleUrl) { style ->
                         val bitmap = android.graphics.BitmapFactory.decodeResource(
                             context.resources,
-                            org.maplibre.android.R.drawable.maplibre_marker_icon_default
+                            R.drawable.maplibre_marker_icon_default
                         )
                         if (bitmap != null) {
                             style.addImage("marcador", bitmap)
@@ -345,6 +346,7 @@ fun RutasScreen(
                                                 )
                                             )
                                     }
+
 
                                     symbolManager.create(
                                         SymbolOptions()
