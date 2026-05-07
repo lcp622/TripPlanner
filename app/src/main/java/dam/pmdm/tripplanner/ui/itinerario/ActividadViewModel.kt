@@ -17,10 +17,12 @@ sealed class ActividadUiState {
     data class Error(val mensaje: String) : ActividadUiState()
 }
 
+
 class ActividadViewModel(private val repository: ActividadRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ActividadUiState>(ActividadUiState.Loading)
     val uiState: StateFlow<ActividadUiState> = _uiState
+
 
     fun cargarActividades(idViaje: String) {
         viewModelScope.launch {

@@ -31,7 +31,6 @@ import org.maplibre.android.maps.MapView
 import org.maplibre.android.plugins.annotation.Symbol
 import org.maplibre.android.plugins.annotation.SymbolManager
 import org.maplibre.android.plugins.annotation.SymbolOptions
-import java.util.Locale
 import java.util.UUID
 import androidx.compose.ui.platform.LocalLocale
 
