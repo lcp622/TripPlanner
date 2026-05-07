@@ -84,7 +84,30 @@ fun PerfilScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        user?.delete()
+                        val uid = user?.uid ?: return@Button
+                        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+                        // Borrar usuario de Firestore
+                        db.collection("usuarios").document(uid).delete()
+
+                        // Borrar viajes propios y sus subcolecciones
+                        db.collection("viajes")
+                            .whereEqualTo("idPropietario", uid)
+                            .get()
+                            .addOnSuccessListener { snapshot ->
+                                snapshot.documents.forEach { viajeDoc ->
+                                    listOf("actividades", "gastos", "participantes", "puntos_interes").forEach { sub ->
+                                        viajeDoc.reference.collection(sub).get()
+                                            .addOnSuccessListener { subDocs ->
+                                                subDocs.documents.forEach { it.reference.delete() }
+                                            }
+                                    }
+                                    viajeDoc.reference.delete()
+                                }
+                            }
+
+                        // Eliminar cuenta de Firebase Auth
+                        user.delete()
                             ?.addOnSuccessListener {
                                 mostrarDialogoBorrarCuenta = false
                                 onCerrarSesion()
