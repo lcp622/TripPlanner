@@ -39,20 +39,18 @@ fun ParticipantesScreen(
     val participantes by repository.obtenerParticipantes(idViaje).collectAsState(initial = emptyList())
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
-    // Filtrar para no mostrar al usuario actual
     val participantesFiltrados = participantes.filter {
         it["idUsuario"]?.toString() != currentUserId
     }
 
-    var mostrarDialogoAñadir by remember { mutableStateOf(false) }
-    var mostrarLimiteAlcanzado by remember { mutableStateOf(false) }
-    var emailNuevo by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf("") }
-    var participanteAEliminar by remember { mutableStateOf<Map<String, Any>?>(null) }
+    val mostrarDialogoAnadir = remember { mutableStateOf(false) }
+    val mostrarLimiteAlcanzado = remember { mutableStateOf(false) }
+    val emailNuevo = remember { mutableStateOf("") }
+    val error = remember { mutableStateOf("") }
+    val participanteAEliminar = remember { mutableStateOf<Map<String, Any>?>(null) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Sincronizar participantes con Room
     LaunchedEffect(participantes) {
         if (participantes.isNotEmpty()) {
             try {
@@ -86,37 +84,37 @@ fun ParticipantesScreen(
     LaunchedEffect(uiState) {
         when (uiState) {
             is ParticipanteUiState.Success -> {
-                mostrarDialogoAñadir = false
-                emailNuevo = ""
-                error = ""
+                mostrarDialogoAnadir.value = false
+                emailNuevo.value = ""
+                error.value = ""
                 participantesViewModel.resetState()
             }
             is ParticipanteUiState.Error -> {
-                error = (uiState as ParticipanteUiState.Error).mensaje
+                error.value = (uiState as ParticipanteUiState.Error).mensaje
             }
             else -> {}
         }
     }
 
-    if (mostrarLimiteAlcanzado) {
+    if (mostrarLimiteAlcanzado.value) {
         AlertDialog(
-            onDismissRequest = { mostrarLimiteAlcanzado = false },
+            onDismissRequest = { mostrarLimiteAlcanzado.value = false },
             title = { Text("Límite alcanzado", fontWeight = FontWeight.Bold) },
             text = { Text("Un viaje puede tener un máximo de 5 participantes.") },
             confirmButton = {
-                TextButton(onClick = { mostrarLimiteAlcanzado = false }) {
+                TextButton(onClick = { mostrarLimiteAlcanzado.value = false }) {
                     Text("Entendido")
                 }
             }
         )
     }
 
-    if (mostrarDialogoAñadir) {
+    if (mostrarDialogoAnadir.value) {
         AlertDialog(
             onDismissRequest = {
-                mostrarDialogoAñadir = false
-                emailNuevo = ""
-                error = ""
+                mostrarDialogoAnadir.value = false
+                emailNuevo.value = ""
+                error.value = ""
                 participantesViewModel.resetState()
             },
             title = { Text("Añadir participante", fontWeight = FontWeight.Bold) },
@@ -129,17 +127,17 @@ fun ParticipantesScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
-                        value = emailNuevo,
-                        onValueChange = { emailNuevo = it },
+                        value = emailNuevo.value,
+                        onValueChange = { emailNuevo.value = it },
                         label = { Text("Email") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
                         colors = tripTextFieldColors()
                     )
-                    if (error.isNotEmpty()) {
+                    if (error.value.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = error,
+                            text = error.value,
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp
                         )
@@ -149,11 +147,11 @@ fun ParticipantesScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        if (emailNuevo.isBlank()) {
-                            error = "El email es obligatorio"
+                        if (emailNuevo.value.isBlank()) {
+                            error.value = "El email es obligatorio"
                         } else {
-                            error = ""
-                            participantesViewModel.añadirParticipante(idViaje, emailNuevo)
+                            error.value = ""
+                            participantesViewModel.anadirParticipante(idViaje, emailNuevo.value)
                         }
                     },
                     enabled = uiState !is ParticipanteUiState.Loading,
@@ -168,9 +166,9 @@ fun ParticipantesScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
-                    mostrarDialogoAñadir = false
-                    emailNuevo = ""
-                    error = ""
+                    mostrarDialogoAnadir.value = false
+                    emailNuevo.value = ""
+                    error.value = ""
                     participantesViewModel.resetState()
                 }) {
                     Text("Cancelar")
@@ -179,9 +177,9 @@ fun ParticipantesScreen(
         )
     }
 
-    participanteAEliminar?.let { p ->
+    participanteAEliminar.value?.let { p ->
         AlertDialog(
-            onDismissRequest = { participanteAEliminar = null },
+            onDismissRequest = { participanteAEliminar.value = null },
             title = { Text("Eliminar participante", fontWeight = FontWeight.Bold) },
             text = { Text("¿Estás segura de que quieres eliminar a \"${p["nombre"]}\" del viaje?") },
             confirmButton = {
@@ -189,7 +187,7 @@ fun ParticipantesScreen(
                     onClick = {
                         val idUsuarioEliminar = p["idUsuario"]?.toString() ?: ""
                         participantesViewModel.eliminarParticipante(idViaje, idUsuarioEliminar)
-                        participanteAEliminar = null
+                        participanteAEliminar.value = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -197,7 +195,7 @@ fun ParticipantesScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { participanteAEliminar = null }) {
+                TextButton(onClick = { participanteAEliminar.value = null }) {
                     Text("Cancelar")
                 }
             }
@@ -297,7 +295,7 @@ fun ParticipantesScreen(
                                 }
                             } else {
                                 IconButton(
-                                    onClick = { participanteAEliminar = participante }
+                                    onClick = { participanteAEliminar.value = participante }
                                 ) {
                                     Icon(
                                         Icons.Default.Delete,
@@ -316,9 +314,9 @@ fun ParticipantesScreen(
         FloatingActionButton(
             onClick = {
                 if (participantes.size >= 5) {
-                    mostrarLimiteAlcanzado = true
+                    mostrarLimiteAlcanzado.value = true
                 } else {
-                    mostrarDialogoAñadir = true
+                    mostrarDialogoAnadir.value = true
                 }
             },
             modifier = Modifier

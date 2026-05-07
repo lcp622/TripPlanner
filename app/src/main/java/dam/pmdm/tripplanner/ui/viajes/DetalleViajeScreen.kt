@@ -1,7 +1,6 @@
 package dam.pmdm.tripplanner.ui.viajes
 
-import android.os.Build
-import androidx.annotation.RequiresApi
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,7 +35,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.ui.platform.LocalLocale
 
-@RequiresApi(Build.VERSION_CODES.O)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleViajeScreen(
@@ -57,7 +56,7 @@ fun DetalleViajeScreen(
     var tabSeleccionada by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf("Itinerario", "Gastos", "Viajeros", "Rutas")
     val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
-    var mostrarDialogoBorrar by remember { mutableStateOf(false) }
+    val mostrarDialogoBorrar = remember { mutableStateOf(false) }
     val context = LocalContext.current
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
@@ -65,7 +64,6 @@ fun DetalleViajeScreen(
         actividadViewModel.cargarActividades(viaje.idViaje)
     }
 
-    // Escuchar cambios colaborativos ignorando la carga inicial
     DisposableEffect(viaje.idViaje) {
         var primeraVezActividades = true
         var primeraVezGastos = true
@@ -118,16 +116,16 @@ fun DetalleViajeScreen(
         else -> ColorFinalizado
     }
 
-    if (mostrarDialogoBorrar) {
+    if (mostrarDialogoBorrar.value) {
         AlertDialog(
-            onDismissRequest = { mostrarDialogoBorrar = false },
+            onDismissRequest = { mostrarDialogoBorrar.value = false },
             title = { Text("Eliminar viaje", fontWeight = FontWeight.Bold) },
             text = { Text("¿Estás segura de que quieres eliminar \"${viaje.nombre}\"? Esta acción no se puede deshacer.") },
             confirmButton = {
                 Button(
                     onClick = {
                         viajeViewModel.eliminarViaje(viaje.idViaje)
-                        mostrarDialogoBorrar = false
+                        mostrarDialogoBorrar.value = false
                         onViajeEliminado()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -136,7 +134,7 @@ fun DetalleViajeScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { mostrarDialogoBorrar = false }) {
+                TextButton(onClick = { mostrarDialogoBorrar.value = false }) {
                     Text("Cancelar")
                 }
             }
@@ -171,7 +169,7 @@ fun DetalleViajeScreen(
                     IconButton(onClick = onEditarViaje) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar viaje", tint = Color.White)
                     }
-                    IconButton(onClick = { mostrarDialogoBorrar = true }) {
+                    IconButton(onClick = { mostrarDialogoBorrar.value = true }) {
                         Icon(Icons.Default.Delete, contentDescription = "Eliminar viaje", tint = Color.White)
                     }
                 }
@@ -272,7 +270,7 @@ fun DetalleViajeScreen(
                 }
             }
 
-            TabRow(
+            PrimaryTabRow (
                 selectedTabIndex = tabSeleccionada,
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = TripBlue

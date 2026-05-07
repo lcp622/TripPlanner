@@ -20,7 +20,7 @@ class ParticipantesViewModel(private val repository: FirestoreViajeRepository) :
     private val _uiState = MutableStateFlow<ParticipanteUiState>(ParticipanteUiState.Idle)
     val uiState: StateFlow<ParticipanteUiState> = _uiState
 
-    fun añadirParticipante(idViaje: String, email: String) {
+    fun anadirParticipante(idViaje: String, email: String) {
         viewModelScope.launch {
             _uiState.value = ParticipanteUiState.Loading
             val resultado = repository.anadirParticipante(idViaje, email)

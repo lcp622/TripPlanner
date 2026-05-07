@@ -1,12 +1,11 @@
 package dam.pmdm.tripplanner.ui.viajes
 
-import android.os.Build
-import androidx.annotation.RequiresApi
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,11 +19,9 @@ import com.vanpra.composematerialdialogs.rememberMaterialDialogState
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
 import dam.pmdm.tripplanner.ui.theme.*
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditarViajeScreen(
@@ -39,7 +36,6 @@ fun EditarViajeScreen(
     var presupuesto by remember { mutableStateOf(viaje.presupuestoTotal.toString()) }
     var errorGeneral by remember { mutableStateOf("") }
 
-    // Validaciones en tiempo real
     val errorNombre = if (nombre.isNotBlank() && nombre.length < 3)
         "El nombre debe tener al menos 3 caracteres" else ""
     val errorDestino = if (paisDestino.isNotBlank() && paisDestino.length < 2)
@@ -107,7 +103,7 @@ fun EditarViajeScreen(
                 navigationIcon = {
                     IconButton(onClick = onVolver) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
