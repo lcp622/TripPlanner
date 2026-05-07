@@ -29,7 +29,6 @@ fun EditarGastoScreen(
     var errorGeneral by remember { mutableStateOf("") }
     var expandedCategoria by remember { mutableStateOf(false) }
 
-    // Validaciones en tiempo real
     val errorConcepto = if (concepto.isNotBlank() && concepto.length < 3)
         "El concepto debe tener al menos 3 caracteres" else ""
     val errorImporte = if (importe.isBlank()) ""
@@ -111,7 +110,7 @@ fun EditarGastoScreen(
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategoria) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor(),
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
                     shape = MaterialTheme.shapes.medium,
                     colors = tripTextFieldColors()
                 )

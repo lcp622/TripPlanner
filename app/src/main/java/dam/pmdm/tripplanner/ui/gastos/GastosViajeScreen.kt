@@ -30,6 +30,7 @@ import dam.pmdm.tripplanner.data.repository.GastoRepository
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun GastosViajeScreen(
@@ -125,7 +126,7 @@ fun GastosViajeScreen(
                                     ) {
                                         Text(text = "Total gastado", color = Color.White, fontSize = 14.sp)
                                         Text(
-                                            text = "€${String.format("%.2f", totalGastado)}",
+                                            text = "€${String.format(LocalLocale.current.platformLocale, "%.2f", totalGastado)}",
                                             color = Color.White,
                                             fontSize = 22.sp,
                                             fontWeight = FontWeight.Bold
@@ -145,7 +146,7 @@ fun GastosViajeScreen(
                                             fontSize = 13.sp
                                         )
                                         Text(
-                                            text = "€${String.format("%.2f", restante)}",
+                                            text = "€${String.format(LocalLocale.current.platformLocale, "%.2f", restante)}",
                                             color = if (restante < 0) Color(0xFFFF5252) else Color.White,
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold
@@ -259,22 +260,22 @@ fun GastoCard(
     repository: GastoRepository,
     viewModel: GastoViewModel
 ) {
-    var mostrarDialogo by remember { mutableStateOf(false) }
+    val mostrarDialogo = remember { mutableStateOf(false) }
     var expandido by remember { mutableStateOf(false) }
     val repartos by repository.obtenerRepartos(gasto.idViaje, gasto.idGasto)
         .collectAsState(initial = emptyList())
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
-    if (mostrarDialogo) {
+    if (mostrarDialogo.value) {
         AlertDialog(
-            onDismissRequest = { mostrarDialogo = false },
+            onDismissRequest = { mostrarDialogo.value = false },
             title = { Text("Eliminar gasto", fontWeight = FontWeight.Bold) },
             text = { Text("¿Estás segura de que quieres eliminar \"${gasto.concepto}\"?") },
             confirmButton = {
                 Button(
                     onClick = {
                         onEliminar()
-                        mostrarDialogo = false
+                        mostrarDialogo.value = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -282,14 +283,14 @@ fun GastoCard(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { mostrarDialogo = false }) {
+                TextButton(onClick = { mostrarDialogo.value = false }) {
                     Text("Cancelar")
                 }
             }
         )
     }
 
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
     val categoriaColor = when (gasto.categoria) {
         "ALOJAMIENTO" -> Color(0xFF9C27B0)
         "TRANSPORTE" -> Color(0xFF2196F3)
@@ -365,7 +366,7 @@ fun GastoCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "€${String.format("%.2f", gasto.importe)}",
+                        text = "€${String.format(LocalLocale.current.platformLocale, "%.2f", gasto.importe)}",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = TripBlue
@@ -373,7 +374,7 @@ fun GastoCard(
                     IconButton(onClick = onEditar, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar", tint = TripBlue, modifier = Modifier.size(18.dp))
                     }
-                    IconButton(onClick = { mostrarDialogo = true }, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = { mostrarDialogo.value = true }, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                     }
                 }
@@ -434,7 +435,7 @@ fun GastoCard(
                                     )
                                 }
                                 Text(
-                                    text = "€${String.format("%.2f", importe)}",
+                                    text = "€${String.format(LocalLocale.current.platformLocale, "%.2f", importe)}",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = if (saldado) MaterialTheme.colorScheme.onSurfaceVariant else TripBlue

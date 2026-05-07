@@ -13,16 +13,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
 import dam.pmdm.tripplanner.data.local.entity.GastoEntity
-import dam.pmdm.tripplanner.data.repository.GastoRepository
 import dam.pmdm.tripplanner.ui.theme.*
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
@@ -31,11 +27,6 @@ import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun GastosScreen() {
-    val context = LocalContext.current
-    val db = TripPlannerDatabase.getInstance(context)
-    val gastoRepository = GastoRepository(db.gastoDao())
-    val viewModel: GastoViewModel = viewModel(factory = GastoViewModelFactory(gastoRepository))
-
     var todosGastos by remember { mutableStateOf<List<GastoEntity>>(emptyList()) }
     var nombresViajes by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -44,19 +35,23 @@ fun GastosScreen() {
         val user = FirebaseAuth.getInstance().currentUser ?: return@LaunchedEffect
         val firestore = FirebaseFirestore.getInstance()
 
-        // Viajes propios
         val viajesPropios = firestore.collection("viajes")
             .whereEqualTo("idPropietario", user.uid)
             .get().await()
 
-        // Viajes donde es participante
         val viajesParticipante = firestore.collection("viajes")
             .whereArrayContains("participantesIds", user.uid)
             .get().await()
 
-        // Combinar ambas listas sin duplicados
         val todosViajes = (viajesPropios.documents + viajesParticipante.documents)
             .distinctBy { it.id }
+
+        val nombres = mutableMapOf<String, String>()
+        todosViajes.forEach { viajeDoc ->
+            val nombre = viajeDoc.getString("nombre") ?: "Viaje"
+            nombres[viajeDoc.id] = nombre
+        }
+        nombresViajes = nombres
 
         val gastos = mutableListOf<GastoEntity>()
         todosViajes.forEach { viajeDoc ->
@@ -117,7 +112,6 @@ fun GastosScreen() {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // Card total
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -134,7 +128,7 @@ fun GastosScreen() {
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = "€${String.format("%.2f", totalGastado)}",
+                                text = "€${String.format(LocalLocale.current.platformLocale, "%.2f", totalGastado)}",
                                 color = Color.White,
                                 fontSize = 36.sp,
                                 fontWeight = FontWeight.Bold
@@ -148,7 +142,6 @@ fun GastosScreen() {
                     }
                 }
 
-                // Gráfico circular
                 if (gastosPorCategoria.isNotEmpty() && totalGastado > 0) {
                     item {
                         GraficoPorCategoria(
@@ -159,7 +152,6 @@ fun GastosScreen() {
                     }
                 }
 
-                // Por categoría
                 if (gastosPorCategoria.isNotEmpty()) {
                     item {
                         Text(
@@ -207,7 +199,7 @@ fun GastosScreen() {
                                         )
                                     }
                                     Text(
-                                        text = "€${String.format("%.2f", importe)}",
+                                        text = "€${String.format(LocalLocale.current.platformLocale, "%.2f", importe)}",
                                         fontWeight = FontWeight.Bold,
                                         color = color
                                     )
@@ -226,7 +218,6 @@ fun GastosScreen() {
                     }
                 }
 
-                // Gastos recientes
                 if (todosGastos.isNotEmpty()) {
                     item {
                         Spacer(modifier = Modifier.height(4.dp))
@@ -354,7 +345,7 @@ fun GraficoPorCategoria(
                             modifier = Modifier.weight(1f)
                         )
                         Text(
-                            text = "€${String.format("%.2f", importe)}",
+                            text = "€${String.format(LocalLocale.current.platformLocale, "%.2f", importe)}",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = color
@@ -426,7 +417,7 @@ fun GastoResumenCard(gasto: GastoEntity, nombreViaje: String = "")  {
                 }
             }
             Text(
-                text = "€${String.format("%.2f", gasto.importe)}",
+                text = "€${String.format(LocalLocale.current.platformLocale, "%.2f", gasto.importe)}",
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 color = TripBlue

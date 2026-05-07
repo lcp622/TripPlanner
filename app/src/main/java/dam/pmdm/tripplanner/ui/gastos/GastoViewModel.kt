@@ -75,19 +75,12 @@ class GastoViewModel(private val repository: GastoRepository) : ViewModel() {
         return gastos.sumOf { it.importe }
     }
 
-    fun gastosPorCategoria(gastos: List<GastoEntity>): Map<String, Double> {
-        return gastos.groupBy { it.categoria }
-            .mapValues { (_, g) -> g.sumOf { it.importe } }
-    }
-
     fun marcarComoSaldado(idViaje: String, idGasto: String, idUsuario: String) {
         viewModelScope.launch {
             repository.marcarComoSaldado(idViaje, idGasto, idUsuario)
         }
     }
 }
-
-
 
 class GastoViewModelFactory(private val repository: GastoRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
