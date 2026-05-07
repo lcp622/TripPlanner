@@ -28,11 +28,9 @@ class Converters {
         ParticipanteEntity::class,
         ActividadEntity::class,
         GastoEntity::class,
-        RepartoGastoEntity::class,
-        RutaEntity::class,
         PuntoInteresEntity::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -43,8 +41,6 @@ abstract class TripPlannerDatabase : RoomDatabase() {
     abstract fun participanteDao(): ParticipanteDao
     abstract fun actividadDao(): ActividadDao
     abstract fun gastoDao(): GastoDao
-    abstract fun repartoGastoDao(): RepartoGastoDao
-    abstract fun rutaDao(): RutaDao
     abstract fun puntoInteresDao(): PuntoInteresDao
 
     companion object {

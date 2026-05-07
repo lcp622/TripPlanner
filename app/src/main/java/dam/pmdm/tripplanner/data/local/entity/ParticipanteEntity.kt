@@ -14,7 +14,6 @@ import androidx.room.PrimaryKey
             childColumns = ["idViaje"],
             onDelete = ForeignKey.CASCADE
         )
-        // Quitamos la FK a UsuarioEntity porque el participante puede no estar en Room
     ],
     indices = [Index("idViaje"), Index("idUsuario")]
 )

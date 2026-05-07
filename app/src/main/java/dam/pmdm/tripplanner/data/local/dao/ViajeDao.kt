@@ -13,9 +13,6 @@ interface ViajeDao {
     @Update
     suspend fun actualizar(viaje: ViajeEntity)
 
-    @Delete
-    suspend fun eliminar(viaje: ViajeEntity)
-
     @Query("SELECT * FROM VIAJE WHERE idPropietario = :idUsuario ORDER BY fechaInicio DESC")
     fun obtenerViajesPorUsuario(idUsuario: String): Flow<List<ViajeEntity>>
 
