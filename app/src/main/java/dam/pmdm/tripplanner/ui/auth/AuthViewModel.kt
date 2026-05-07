@@ -13,15 +13,16 @@ sealed class AuthUiState {
     object Loading : AuthUiState()
     object Success : AuthUiState()
     data class Error(val mensaje: String) : AuthUiState()
-
 }
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = AuthRepository(application.applicationContext)
-
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState
+    private val _perfilState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
+    val perfilState: StateFlow<AuthUiState> = _perfilState
+
 
     val estaAutenticado: Boolean
         get() = repository.estaAutenticado
@@ -49,9 +50,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-
-    private val _perfilState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
-    val perfilState: StateFlow<AuthUiState> = _perfilState
 
     fun actualizarPerfil(nombre: String, fotoUrl: String?) {
         viewModelScope.launch {
