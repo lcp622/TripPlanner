@@ -1,7 +1,6 @@
 package dam.pmdm.tripplanner.ui
 
-import android.os.Build
-import androidx.annotation.RequiresApi
+
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.Box
@@ -63,7 +62,6 @@ object Rutas {
     const val EDITAR_PERFIL = "editar_perfil"
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NavGraph(
     navController: NavHostController = rememberNavController(),

@@ -6,11 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import coil.Coil
@@ -24,12 +22,10 @@ class MainActivity : ComponentActivity() {
 
     private val settingsViewModel: SettingsViewModel by viewModels()
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Pedir permiso de notificaciones en Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissions(
                 arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
@@ -42,7 +38,6 @@ class MainActivity : ComponentActivity() {
             .build()
         Coil.setImageLoader(imageLoader)
 
-        // Programar notificaciones diarias
         val workRequest = PeriodicWorkRequestBuilder<NotificacionWorker>(
             1, TimeUnit.DAYS
         ).build()
@@ -53,14 +48,11 @@ class MainActivity : ComponentActivity() {
             workRequest
         )
 
-
         setContent {
             val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
             TripPlannerTheme(darkTheme = isDarkMode) {
                 NavGraph(settingsViewModel = settingsViewModel)
             }
         }
-
-
     }
 }
