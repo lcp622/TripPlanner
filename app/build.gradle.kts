@@ -54,6 +54,7 @@ dependencies {
 
     implementation(libs.compose.material.dialogs)
     implementation(libs.androidx.work)
+    implementation(libs.androidx.splashscreen)
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))

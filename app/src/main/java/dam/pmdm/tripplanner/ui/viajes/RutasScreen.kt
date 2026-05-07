@@ -1,6 +1,5 @@
 package dam.pmdm.tripplanner.ui.viajes
 
-
 import android.os.Bundle
 import android.util.Log
 import androidx.compose.foundation.layout.*
@@ -14,8 +13,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.gson.JsonPrimitive
+import com.google.gson.JsonObject
 import dam.pmdm.tripplanner.BuildConfig
 import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
 import dam.pmdm.tripplanner.data.local.entity.PuntoInteresEntity
@@ -30,12 +31,9 @@ import org.maplibre.android.maps.MapView
 import org.maplibre.android.plugins.annotation.Symbol
 import org.maplibre.android.plugins.annotation.SymbolManager
 import org.maplibre.android.plugins.annotation.SymbolOptions
+import java.util.Locale
 import java.util.UUID
 import androidx.compose.ui.platform.LocalLocale
-import org.maplibre.android.R
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toBitmap
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +56,13 @@ fun RutasScreen(
     val symbolManagerRef = remember { mutableStateOf<SymbolManager?>(null) }
     val symbolSeleccionado = remember { mutableStateOf<Symbol?>(null) }
     val nombreSeleccionado = remember { mutableStateOf("") }
+    val categoriaSeleccionadaDialogo = remember { mutableStateOf("") }
+    val descripcionSeleccionada = remember { mutableStateOf("") }
+
+    val marcadorBitmap = remember {
+        val drawable = ContextCompat.getDrawable(context, org.maplibre.android.R.drawable.maplibre_marker_icon_default)
+        drawable?.toBitmap()
+    }
 
     val categorias = listOf("ATRACCION", "RESTAURANTE", "HOTEL", "MUSEO", "MONUMENTO", "OTRO")
 
@@ -88,10 +93,28 @@ fun RutasScreen(
             onDismissRequest = {
                 symbolSeleccionado.value = null
                 nombreSeleccionado.value = ""
+                categoriaSeleccionadaDialogo.value = ""
+                descripcionSeleccionada.value = ""
             },
             title = { Text(nombreSeleccionado.value.ifBlank { "Punto de interés" }, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
+                    if (categoriaSeleccionadaDialogo.value.isNotBlank()) {
+                        Text(
+                            text = categoriaSeleccionadaDialogo.value,
+                            color = TripBlue,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.sp
+                        )
+                    }
+                    if (descripcionSeleccionada.value.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = descripcionSeleccionada.value,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "¿Quieres eliminar este punto?",
@@ -123,6 +146,8 @@ fun RutasScreen(
                         contadorPuntos.intValue--
                         symbolSeleccionado.value = null
                         nombreSeleccionado.value = ""
+                        categoriaSeleccionadaDialogo.value = ""
+                        descripcionSeleccionada.value = ""
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -133,6 +158,8 @@ fun RutasScreen(
                 TextButton(onClick = {
                     symbolSeleccionado.value = null
                     nombreSeleccionado.value = ""
+                    categoriaSeleccionadaDialogo.value = ""
+                    descripcionSeleccionada.value = ""
                 }) {
                     Text("Cancelar")
                 }
@@ -221,12 +248,14 @@ fun RutasScreen(
                             val idPunto = UUID.randomUUID().toString()
                             val orden = contadorPuntos.intValue + 1
                             val nombre = nombrePunto.value
+                            val categoria = categoriaSeleccionada.value
+                            val descripcion = descripcionPunto.value.ifBlank { null }
 
                             val puntoFirestore = mapOf(
                                 "idPunto" to idPunto,
                                 "nombre" to nombre,
-                                "categoria" to categoriaSeleccionada.value,
-                                "descripcion" to descripcionPunto.value.ifBlank { null },
+                                "categoria" to categoria,
+                                "descripcion" to descripcion,
                                 "latitud" to latitudSeleccionada.doubleValue,
                                 "longitud" to longitudSeleccionada.doubleValue,
                                 "orden" to orden
@@ -245,8 +274,8 @@ fun RutasScreen(
                                             idPunto = idPunto,
                                             idViaje = idViaje,
                                             nombre = nombre,
-                                            categoria = categoriaSeleccionada.value,
-                                            descripcion = descripcionPunto.value.ifBlank { null },
+                                            categoria = categoria,
+                                            descripcion = descripcion,
                                             latitud = latitudSeleccionada.doubleValue,
                                             longitud = longitudSeleccionada.doubleValue,
                                             orden = orden
@@ -254,12 +283,18 @@ fun RutasScreen(
                                     )
                             }
 
+                            val data = JsonObject().apply {
+                                addProperty("nombre", nombre)
+                                addProperty("categoria", categoria)
+                                addProperty("descripcion", descripcion ?: "")
+                            }
+
                             symbolManagerRef.value?.create(
                                 SymbolOptions()
                                     .withLatLng(LatLng(latitudSeleccionada.doubleValue, longitudSeleccionada.doubleValue))
                                     .withIconImage("marcador")
                                     .withIconSize(1.0f)
-                                    .withData(JsonPrimitive(nombre))
+                                    .withData(data)
                             )
 
                             contadorPuntos.intValue++
@@ -292,10 +327,8 @@ fun RutasScreen(
             factory = {
                 mapView.getMapAsync { map ->
                     map.setStyle(styleUrl) { style ->
-                        val drawable = ContextCompat.getDrawable(context, R.drawable.maplibre_marker_icon_default)
-                        val bitmap = drawable?.toBitmap()
-                        if (bitmap != null) {
-                            style.addImage("marcador", bitmap)
+                        if (marcadorBitmap != null) {
+                            style.addImage("marcador", marcadorBitmap)
                         }
 
                         val symbolManager = SymbolManager(mapView, map, style)
@@ -304,8 +337,10 @@ fun RutasScreen(
                         symbolManagerRef.value = symbolManager
 
                         symbolManager.addClickListener { symbol ->
-                            val nombre = symbol.data?.asString ?: "Punto de interés"
-                            nombreSeleccionado.value = nombre
+                            val obj = symbol.data?.asJsonObject
+                            nombreSeleccionado.value = obj?.get("nombre")?.asString ?: "Punto de interés"
+                            categoriaSeleccionadaDialogo.value = obj?.get("categoria")?.asString ?: ""
+                            descripcionSeleccionada.value = obj?.get("descripcion")?.asString ?: ""
                             symbolSeleccionado.value = symbol
                             true
                         }
@@ -328,7 +363,7 @@ fun RutasScreen(
                                     val lng = doc.getDouble("longitud") ?: return@forEach
                                     val nombre = doc.getString("nombre") ?: ""
                                     val categoria = doc.getString("categoria") ?: ""
-                                    val descripcion = doc.getString("descripcion")
+                                    val descripcion = doc.getString("descripcion") ?: ""
                                     val idPunto = doc.getString("idPunto") ?: doc.id
                                     val orden = doc.getLong("orden")?.toInt() ?: 0
 
@@ -341,7 +376,7 @@ fun RutasScreen(
                                                     idViaje = idViaje,
                                                     nombre = nombre,
                                                     categoria = categoria,
-                                                    descripcion = descripcion,
+                                                    descripcion = descripcion.ifBlank { null },
                                                     latitud = lat,
                                                     longitud = lng,
                                                     orden = orden
@@ -349,13 +384,18 @@ fun RutasScreen(
                                             )
                                     }
 
+                                    val data = JsonObject().apply {
+                                        addProperty("nombre", nombre)
+                                        addProperty("categoria", categoria)
+                                        addProperty("descripcion", descripcion)
+                                    }
 
                                     symbolManager.create(
                                         SymbolOptions()
                                             .withLatLng(LatLng(lat, lng))
                                             .withIconImage("marcador")
                                             .withIconSize(1.0f)
-                                            .withData(JsonPrimitive(nombre))
+                                            .withData(data)
                                     )
                                 }
                             }

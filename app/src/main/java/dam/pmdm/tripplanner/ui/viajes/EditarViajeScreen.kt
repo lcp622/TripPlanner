@@ -1,6 +1,5 @@
 package dam.pmdm.tripplanner.ui.viajes
 
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,9 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vanpra.composematerialdialogs.MaterialDialog
-import com.vanpra.composematerialdialogs.datetime.date.datepicker
-import com.vanpra.composematerialdialogs.rememberMaterialDialogState
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
 import dam.pmdm.tripplanner.ui.theme.*
 import java.time.Instant
@@ -61,33 +57,54 @@ fun EditarViajeScreen(
     val errorFechas = if (fechaFinSeleccionada.isBefore(fechaInicioSeleccionada))
         "La fecha de fin debe ser posterior a la de inicio" else ""
 
-    val fechaInicioDialogState = rememberMaterialDialogState()
-    val fechaFinDialogState = rememberMaterialDialogState()
+    val mostrarPickerInicio = remember { mutableStateOf(false) }
+    val mostrarPickerFin = remember { mutableStateOf(false) }
 
-    MaterialDialog(
-        dialogState = fechaInicioDialogState,
-        buttons = {
-            positiveButton("OK")
-            negativeButton("Cancelar")
+    val fechaInicioPickerState = rememberDatePickerState(
+        initialSelectedDateMillis = viaje.fechaInicio
+    )
+    val fechaFinPickerState = rememberDatePickerState(
+        initialSelectedDateMillis = viaje.fechaFin
+    )
+
+    if (mostrarPickerInicio.value) {
+        DatePickerDialog(
+            onDismissRequest = { mostrarPickerInicio.value = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    fechaInicioPickerState.selectedDateMillis?.let { millis ->
+                        fechaInicioSeleccionada = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.systemDefault()).toLocalDate()
+                    }
+                    mostrarPickerInicio.value = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarPickerInicio.value = false }) { Text("Cancelar") }
+            }
+        ) {
+            DatePicker(state = fechaInicioPickerState)
         }
-    ) {
-        datepicker(
-            initialDate = fechaInicioSeleccionada,
-            title = "Fecha de inicio"
-        ) { fecha -> fechaInicioSeleccionada = fecha }
     }
 
-    MaterialDialog(
-        dialogState = fechaFinDialogState,
-        buttons = {
-            positiveButton("OK")
-            negativeButton("Cancelar")
+    if (mostrarPickerFin.value) {
+        DatePickerDialog(
+            onDismissRequest = { mostrarPickerFin.value = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    fechaFinPickerState.selectedDateMillis?.let { millis ->
+                        fechaFinSeleccionada = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.systemDefault()).toLocalDate()
+                    }
+                    mostrarPickerFin.value = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarPickerFin.value = false }) { Text("Cancelar") }
+            }
+        ) {
+            DatePicker(state = fechaFinPickerState)
         }
-    ) {
-        datepicker(
-            initialDate = fechaFinSeleccionada,
-            title = "Fecha de fin"
-        ) { fecha -> fechaFinSeleccionada = fecha }
     }
 
     Scaffold(
@@ -157,7 +174,7 @@ fun EditarViajeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
                 trailingIcon = {
-                    IconButton(onClick = { fechaInicioDialogState.show() }) {
+                    IconButton(onClick = { mostrarPickerInicio.value = true }) {
                         Icon(Icons.Default.DateRange, contentDescription = null, tint = TripBlue)
                     }
                 },
@@ -172,7 +189,7 @@ fun EditarViajeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
                 trailingIcon = {
-                    IconButton(onClick = { fechaFinDialogState.show() }) {
+                    IconButton(onClick = { mostrarPickerFin.value = true }) {
                         Icon(Icons.Default.DateRange, contentDescription = null, tint = TripBlue)
                     }
                 },

@@ -13,11 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vanpra.composematerialdialogs.MaterialDialog
-import com.vanpra.composematerialdialogs.datetime.date.datepicker
-import com.vanpra.composematerialdialogs.datetime.time.timepicker
-import com.vanpra.composematerialdialogs.rememberMaterialDialogState
 import dam.pmdm.tripplanner.ui.theme.*
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -49,49 +46,74 @@ fun CrearActividadScreen(
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-    val fechaDialogState = rememberMaterialDialogState()
-    val horaInicioDialogState = rememberMaterialDialogState()
-    val horaFinDialogState = rememberMaterialDialogState()
+    val mostrarPickerFecha = remember { mutableStateOf(false) }
+    val mostrarPickerHoraInicio = remember { mutableStateOf(false) }
+    val mostrarPickerHoraFin = remember { mutableStateOf(false) }
 
-    MaterialDialog(
-        dialogState = fechaDialogState,
-        buttons = {
-            positiveButton("OK")
-            negativeButton("Cancelar")
+    val fechaPickerState = rememberDatePickerState(
+        initialSelectedDateMillis = System.currentTimeMillis()
+    )
+    val horaInicioPickerState = rememberTimePickerState(
+        initialHour = 9,
+        initialMinute = 0,
+        is24Hour = true
+    )
+    val horaFinPickerState = rememberTimePickerState(
+        initialHour = 10,
+        initialMinute = 0,
+        is24Hour = true
+    )
+
+    if (mostrarPickerFecha.value) {
+        DatePickerDialog(
+            onDismissRequest = { mostrarPickerFecha.value = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    fechaPickerState.selectedDateMillis?.let { millis ->
+                        fechaSeleccionada = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.systemDefault()).toLocalDate()
+                    }
+                    mostrarPickerFecha.value = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarPickerFecha.value = false }) { Text("Cancelar") }
+            }
+        ) {
+            DatePicker(state = fechaPickerState)
         }
-    ) {
-        datepicker(
-            initialDate = LocalDate.now(),
-            title = "Selecciona la fecha"
-        ) { fecha -> fechaSeleccionada = fecha }
     }
 
-    MaterialDialog(
-        dialogState = horaInicioDialogState,
-        buttons = {
-            positiveButton("OK")
-            negativeButton("Cancelar")
-        }
-    ) {
-        timepicker(
-            initialTime = LocalTime.of(9, 0),
-            title = "Hora de inicio",
-            is24HourClock = true
-        ) { hora -> horaInicioSeleccionada = hora }
+    if (mostrarPickerHoraInicio.value) {
+        AlertDialog(
+            onDismissRequest = { mostrarPickerHoraInicio.value = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    horaInicioSeleccionada = LocalTime.of(horaInicioPickerState.hour, horaInicioPickerState.minute)
+                    mostrarPickerHoraInicio.value = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarPickerHoraInicio.value = false }) { Text("Cancelar") }
+            },
+            text = { TimePicker(state = horaInicioPickerState) }
+        )
     }
 
-    MaterialDialog(
-        dialogState = horaFinDialogState,
-        buttons = {
-            positiveButton("OK")
-            negativeButton("Cancelar")
-        }
-    ) {
-        timepicker(
-            initialTime = LocalTime.of(10, 0),
-            title = "Hora de fin",
-            is24HourClock = true
-        ) { hora -> horaFinSeleccionada = hora }
+    if (mostrarPickerHoraFin.value) {
+        AlertDialog(
+            onDismissRequest = { mostrarPickerHoraFin.value = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    horaFinSeleccionada = LocalTime.of(horaFinPickerState.hour, horaFinPickerState.minute)
+                    mostrarPickerHoraFin.value = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarPickerHoraFin.value = false }) { Text("Cancelar") }
+            },
+            text = { TimePicker(state = horaFinPickerState) }
+        )
     }
 
     Scaffold(
@@ -148,7 +170,7 @@ fun CrearActividadScreen(
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
                 trailingIcon = {
-                    IconButton(onClick = { fechaDialogState.show() }) {
+                    IconButton(onClick = { mostrarPickerFecha.value = true }) {
                         Icon(Icons.Default.DateRange, contentDescription = null, tint = TripBlue)
                     }
                 },
@@ -163,7 +185,7 @@ fun CrearActividadScreen(
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
                 trailingIcon = {
-                    IconButton(onClick = { horaInicioDialogState.show() }) {
+                    IconButton(onClick = { mostrarPickerHoraInicio.value = true }) {
                         Icon(Icons.Default.Schedule, contentDescription = null, tint = TripBlue)
                     }
                 },
@@ -178,7 +200,7 @@ fun CrearActividadScreen(
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
                 trailingIcon = {
-                    IconButton(onClick = { horaFinDialogState.show() }) {
+                    IconButton(onClick = { mostrarPickerHoraFin.value = true }) {
                         Icon(Icons.Default.Schedule, contentDescription = null, tint = TripBlue)
                     }
                 },

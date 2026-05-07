@@ -17,7 +17,7 @@ import dam.pmdm.tripplanner.ui.NavGraph
 import dam.pmdm.tripplanner.ui.SettingsViewModel
 import dam.pmdm.tripplanner.ui.theme.TripPlannerTheme
 import java.util.concurrent.TimeUnit
-
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 class MainActivity : ComponentActivity() {
 
     private val settingsViewModel: SettingsViewModel by viewModels()
@@ -47,8 +47,9 @@ class MainActivity : ComponentActivity() {
             ExistingPeriodicWorkPolicy.KEEP,
             workRequest
         )
-
+        installSplashScreen()
         setContent {
+
             val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
             TripPlannerTheme(darkTheme = isDarkMode) {
                 NavGraph(settingsViewModel = settingsViewModel)
