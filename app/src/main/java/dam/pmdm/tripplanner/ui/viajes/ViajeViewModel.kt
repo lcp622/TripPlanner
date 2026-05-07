@@ -76,14 +76,6 @@ class ViajeViewModel(private val repository: FirestoreViajeRepository) : ViewMod
         }
     }
 }
-fun calcularEstado(fechaInicio: Long, fechaFin: Long): String {
-    val ahora = System.currentTimeMillis()
-    return when {
-        ahora < fechaInicio -> "PLANIFICADO"
-        ahora > fechaFin -> "FINALIZADO"
-        else -> "EN_CURSO"
-    }
-}
 
 class ViajeViewModelFactory(private val repository: FirestoreViajeRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

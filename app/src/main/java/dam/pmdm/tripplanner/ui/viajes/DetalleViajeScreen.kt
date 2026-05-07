@@ -310,7 +310,6 @@ fun DetalleViajeScreen(
                 )
                 3 -> RutasScreen(
                     idViaje = viaje.idViaje,
-                    paisDestino = viaje.paisDestino
                 )
             }
         }

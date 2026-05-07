@@ -16,57 +16,72 @@ import dam.pmdm.tripplanner.BuildConfig
 import dam.pmdm.tripplanner.data.local.TripPlannerDatabase
 import dam.pmdm.tripplanner.data.local.entity.PuntoInteresEntity
 import dam.pmdm.tripplanner.ui.theme.*
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
-import org.maplibre.android.annotations.Marker
-import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapView
+import org.maplibre.android.plugins.annotation.Symbol
+import org.maplibre.android.plugins.annotation.SymbolManager
+import org.maplibre.android.plugins.annotation.SymbolOptions
+import java.util.UUID
+import androidx.compose.ui.platform.LocalLocale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RutasScreen(
-    idViaje: String,
-    paisDestino: String
+    idViaje: String
 ) {
     val context = LocalContext.current
     val apiKey = BuildConfig.MAPTILER_API_KEY
     val styleUrl = "https://api.maptiler.com/maps/streets/style.json?key=$apiKey"
 
-    var mostrarDialogoAñadir by remember { mutableStateOf(false) }
-    var nombrePunto by remember { mutableStateOf("") }
-    var descripcionPunto by remember { mutableStateOf("") }
-    var categoriaSeleccionada by remember { mutableStateOf("ATRACCION") }
-    var expandedCategoria by remember { mutableStateOf(false) }
-    var latitudSeleccionada by remember { mutableStateOf(0.0) }
-    var longitudSeleccionada by remember { mutableStateOf(0.0) }
-    var contadorPuntos by remember { mutableStateOf(0) }
-    var error by remember { mutableStateOf("") }
-    var mapRef by remember { mutableStateOf<org.maplibre.android.maps.MapLibreMap?>(null) }
-    var marcadorSeleccionado by remember { mutableStateOf<Marker?>(null) }
+    val mostrarDialogoAnadir = remember { mutableStateOf(false) }
+    val nombrePunto = remember { mutableStateOf("") }
+    val descripcionPunto = remember { mutableStateOf("") }
+    val categoriaSeleccionada = remember { mutableStateOf("ATRACCION") }
+    val expandedCategoria = remember { mutableStateOf(false) }
+    val latitudSeleccionada = remember { mutableDoubleStateOf(0.0) }
+    val longitudSeleccionada = remember { mutableDoubleStateOf(0.0) }
+    val contadorPuntos = remember { mutableIntStateOf(0) }
+    val error = remember { mutableStateOf("") }
+    val symbolManagerRef = remember { mutableStateOf<SymbolManager?>(null) }
+    val symbolSeleccionado = remember { mutableStateOf<Symbol?>(null) }
 
     val categorias = listOf("ATRACCION", "RESTAURANTE", "HOTEL", "MUSEO", "MONUMENTO", "OTRO")
 
-    // Diálogo opciones marcador seleccionado
-    marcadorSeleccionado?.let { marker ->
+    val mapView = remember {
+        MapView(context).apply {
+            onCreate(Bundle())
+            onStart()
+            onResume()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                symbolManagerRef.value?.onDestroy()
+                mapView.onPause()
+                mapView.onStop()
+                mapView.onDestroy()
+            } catch (e: Exception) {
+                android.util.Log.e("RutasScreen", "Error al destruir mapa: ${e.message}")
+            }
+        }
+    }
+
+    symbolSeleccionado.value?.let { symbol ->
         AlertDialog(
-            onDismissRequest = { marcadorSeleccionado = null },
-            title = { Text(marker.title ?: "Punto de interés", fontWeight = FontWeight.Bold) },
+            onDismissRequest = { symbolSeleccionado.value = null },
+            title = { Text(symbol.textField ?: "Punto de interés", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    if (!marker.snippet.isNullOrBlank()) {
-                        Text(
-                            text = marker.snippet,
-                            color = TripBlue,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 13.sp
-                        )
-                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "¿Qué quieres hacer con este punto?",
+                        text = "¿Quieres eliminar este punto?",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
@@ -75,7 +90,7 @@ fun RutasScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val nombreMarker = marker.title
+                        val nombreMarker = symbol.textField
                         FirebaseFirestore.getInstance()
                             .collection("viajes").document(idViaje)
                             .collection("puntos_interes")
@@ -85,16 +100,16 @@ fun RutasScreen(
                                 snapshot.documents.forEach { doc ->
                                     val idPunto = doc.getString("idPunto") ?: doc.id
                                     doc.reference.delete()
-                                    GlobalScope.launch {
+                                    CoroutineScope(Dispatchers.IO).launch {
                                         TripPlannerDatabase.getInstance(context)
                                             .puntoInteresDao()
                                             .eliminarPorId(idPunto)
                                     }
                                 }
                             }
-                        mapRef?.removeMarker(marker)
-                        contadorPuntos--
-                        marcadorSeleccionado = null
+                        symbolManagerRef.value?.delete(symbol)
+                        contadorPuntos.intValue--
+                        symbolSeleccionado.value = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -102,34 +117,33 @@ fun RutasScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { marcadorSeleccionado = null }) {
+                TextButton(onClick = { symbolSeleccionado.value = null }) {
                     Text("Cancelar")
                 }
             }
         )
     }
 
-    // Diálogo añadir punto
-    if (mostrarDialogoAñadir) {
+    if (mostrarDialogoAnadir.value) {
         AlertDialog(
             onDismissRequest = {
-                mostrarDialogoAñadir = false
-                nombrePunto = ""
-                descripcionPunto = ""
-                error = ""
+                mostrarDialogoAnadir.value = false
+                nombrePunto.value = ""
+                descripcionPunto.value = ""
+                error.value = ""
             },
             title = { Text("Añadir punto de interés", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text(
-                        text = "Coordenadas: ${String.format("%.4f", latitudSeleccionada)}, ${String.format("%.4f", longitudSeleccionada)}",
+                        text = "Coordenadas: ${String.format(LocalLocale.current.platformLocale, "%.4f", latitudSeleccionada.doubleValue)}, ${String.format(LocalLocale.current.platformLocale, "%.4f", longitudSeleccionada.doubleValue)}",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
-                        value = nombrePunto,
-                        onValueChange = { nombrePunto = it },
+                        value = nombrePunto.value,
+                        onValueChange = { nombrePunto.value = it },
                         label = { Text("Nombre del lugar *") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
@@ -137,31 +151,31 @@ fun RutasScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     ExposedDropdownMenuBox(
-                        expanded = expandedCategoria,
-                        onExpandedChange = { expandedCategoria = it }
+                        expanded = expandedCategoria.value,
+                        onExpandedChange = { expandedCategoria.value = it }
                     ) {
                         OutlinedTextField(
-                            value = categoriaSeleccionada,
+                            value = categoriaSeleccionada.value,
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Categoría") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategoria) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategoria.value) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor(),
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
                             shape = MaterialTheme.shapes.medium,
                             colors = tripTextFieldColors()
                         )
                         ExposedDropdownMenu(
-                            expanded = expandedCategoria,
-                            onDismissRequest = { expandedCategoria = false }
+                            expanded = expandedCategoria.value,
+                            onDismissRequest = { expandedCategoria.value = false }
                         ) {
                             categorias.forEach { categoria ->
                                 DropdownMenuItem(
                                     text = { Text(categoria) },
                                     onClick = {
-                                        categoriaSeleccionada = categoria
-                                        expandedCategoria = false
+                                        categoriaSeleccionada.value = categoria
+                                        expandedCategoria.value = false
                                     }
                                 )
                             }
@@ -169,35 +183,35 @@ fun RutasScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
-                        value = descripcionPunto,
-                        onValueChange = { descripcionPunto = it },
+                        value = descripcionPunto.value,
+                        onValueChange = { descripcionPunto.value = it },
                         label = { Text("Descripción") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
                         colors = tripTextFieldColors()
                     )
-                    if (error.isNotEmpty()) {
+                    if (error.value.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = error, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                        Text(text = error.value, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                     }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        if (nombrePunto.isBlank()) {
-                            error = "El nombre es obligatorio"
+                        if (nombrePunto.value.isBlank()) {
+                            error.value = "El nombre es obligatorio"
                         } else {
-                            val idPunto = java.util.UUID.randomUUID().toString()
-                            val orden = contadorPuntos + 1
+                            val idPunto = UUID.randomUUID().toString()
+                            val orden = contadorPuntos.intValue + 1
 
                             val puntoFirestore = mapOf(
                                 "idPunto" to idPunto,
-                                "nombre" to nombrePunto,
-                                "categoria" to categoriaSeleccionada,
-                                "descripcion" to descripcionPunto.ifBlank { null },
-                                "latitud" to latitudSeleccionada,
-                                "longitud" to longitudSeleccionada,
+                                "nombre" to nombrePunto.value,
+                                "categoria" to categoriaSeleccionada.value,
+                                "descripcion" to descripcionPunto.value.ifBlank { null },
+                                "latitud" to latitudSeleccionada.doubleValue,
+                                "longitud" to longitudSeleccionada.doubleValue,
                                 "orden" to orden
                             )
 
@@ -206,35 +220,38 @@ fun RutasScreen(
                                 .collection("puntos_interes")
                                 .add(puntoFirestore)
 
-                            GlobalScope.launch {
+                            CoroutineScope(Dispatchers.IO).launch {
                                 TripPlannerDatabase.getInstance(context)
                                     .puntoInteresDao()
                                     .insertar(
                                         PuntoInteresEntity(
                                             idPunto = idPunto,
                                             idViaje = idViaje,
-                                            nombre = nombrePunto,
-                                            categoria = categoriaSeleccionada,
-                                            descripcion = descripcionPunto.ifBlank { null },
-                                            latitud = latitudSeleccionada,
-                                            longitud = longitudSeleccionada,
+                                            nombre = nombrePunto.value,
+                                            categoria = categoriaSeleccionada.value,
+                                            descripcion = descripcionPunto.value.ifBlank { null },
+                                            latitud = latitudSeleccionada.doubleValue,
+                                            longitud = longitudSeleccionada.doubleValue,
                                             orden = orden
                                         )
                                     )
                             }
 
-                            mapRef?.addMarker(
-                                MarkerOptions()
-                                    .position(LatLng(latitudSeleccionada, longitudSeleccionada))
-                                    .title(nombrePunto)
-                                    .snippet(categoriaSeleccionada)
+                            symbolManagerRef.value?.create(
+                                SymbolOptions()
+                                    .withLatLng(LatLng(latitudSeleccionada.doubleValue, longitudSeleccionada.doubleValue))
+                                    .withTextField(nombrePunto.value)
+                                    .withTextSize(14f)
+                                    .withTextColor("#026ce6")
+                                    .withTextOffset(arrayOf(0f, 1f))
+                                    .withIconImage("marker-15")
                             )
 
-                            contadorPuntos++
-                            mostrarDialogoAñadir = false
-                            nombrePunto = ""
-                            descripcionPunto = ""
-                            error = ""
+                            contadorPuntos.intValue++
+                            mostrarDialogoAnadir.value = false
+                            nombrePunto.value = ""
+                            descripcionPunto.value = ""
+                            error.value = ""
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = TripBlue)
@@ -244,10 +261,10 @@ fun RutasScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
-                    mostrarDialogoAñadir = false
-                    nombrePunto = ""
-                    descripcionPunto = ""
-                    error = ""
+                    mostrarDialogoAnadir.value = false
+                    nombrePunto.value = ""
+                    descripcionPunto.value = ""
+                    error.value = ""
                 }) {
                     Text("Cancelar")
                 }
@@ -257,21 +274,26 @@ fun RutasScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
-            factory = { ctx ->
-                MapLibre.getInstance(ctx)
-                val mapView = MapView(ctx)
-                mapView.onCreate(Bundle())
-                mapView.onStart()
-                mapView.onResume()
+            factory = {
+                MapLibre.getInstance(context)
                 mapView.getMapAsync { map ->
-                    mapRef = map
-                    map.setStyle(styleUrl) {
+                    map.setStyle(styleUrl) { style ->
+                        val symbolManager = SymbolManager(mapView, map, style)
+                        symbolManager.iconAllowOverlap = true
+                        symbolManager.textAllowOverlap = true
+                        symbolManagerRef.value = symbolManager
+
+                        symbolManager.addClickListener { symbol ->
+                            symbolSeleccionado.value = symbol
+                            true
+                        }
+
                         FirebaseFirestore.getInstance()
                             .collection("viajes").document(idViaje)
                             .collection("puntos_interes")
                             .get()
                             .addOnSuccessListener { snapshot ->
-                                contadorPuntos = snapshot.size()
+                                contadorPuntos.intValue = snapshot.size()
                                 snapshot.documents.forEach { doc ->
                                     val lat = doc.getDouble("latitud") ?: return@forEach
                                     val lng = doc.getDouble("longitud") ?: return@forEach
@@ -281,8 +303,8 @@ fun RutasScreen(
                                     val idPunto = doc.getString("idPunto") ?: doc.id
                                     val orden = doc.getLong("orden")?.toInt() ?: 0
 
-                                    GlobalScope.launch {
-                                        TripPlannerDatabase.getInstance(ctx)
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        TripPlannerDatabase.getInstance(context)
                                             .puntoInteresDao()
                                             .insertar(
                                                 PuntoInteresEntity(
@@ -298,11 +320,14 @@ fun RutasScreen(
                                             )
                                     }
 
-                                    map.addMarker(
-                                        MarkerOptions()
-                                            .position(LatLng(lat, lng))
-                                            .title(nombre)
-                                            .snippet(categoria)
+                                    symbolManager.create(
+                                        SymbolOptions()
+                                            .withLatLng(LatLng(lat, lng))
+                                            .withTextField(nombre)
+                                            .withTextSize(14f)
+                                            .withTextColor("#026ce6")
+                                            .withTextOffset(arrayOf(0f, 1f))
+                                            .withIconImage("marker-15")
                                     )
                                 }
                             }
@@ -313,24 +338,14 @@ fun RutasScreen(
                         .zoom(5.0)
                         .build()
 
-                    map.setOnMarkerClickListener { marker ->
-                        marcadorSeleccionado = marker
-                        true
-                    }
-
                     map.addOnMapClickListener { point ->
-                        latitudSeleccionada = point.latitude
-                        longitudSeleccionada = point.longitude
-                        mostrarDialogoAñadir = true
+                        latitudSeleccionada.doubleValue = point.latitude
+                        longitudSeleccionada.doubleValue = point.longitude
+                        mostrarDialogoAnadir.value = true
                         true
                     }
                 }
                 mapView
-            },
-            onRelease = { mapView ->
-                mapView.onPause()
-                mapView.onStop()
-                mapView.onDestroy()
             },
             modifier = Modifier.fillMaxSize()
         )

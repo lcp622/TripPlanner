@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "dam.pmdm.tripplanner"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dam.pmdm.tripplanner"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -88,6 +88,7 @@ dependencies {
 
     // MapLibre
     implementation(libs.maplibre.android)
+    implementation(libs.maplibre.annotation)
 
     // Testing
     testImplementation(libs.junit)
