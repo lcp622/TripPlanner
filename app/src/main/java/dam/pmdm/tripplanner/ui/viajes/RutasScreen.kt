@@ -1,5 +1,6 @@
 package dam.pmdm.tripplanner.ui.viajes
 
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import androidx.compose.foundation.layout.*
@@ -32,6 +33,9 @@ import org.maplibre.android.plugins.annotation.SymbolOptions
 import java.util.UUID
 import androidx.compose.ui.platform.LocalLocale
 import org.maplibre.android.R
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -288,10 +292,8 @@ fun RutasScreen(
             factory = {
                 mapView.getMapAsync { map ->
                     map.setStyle(styleUrl) { style ->
-                        val bitmap = android.graphics.BitmapFactory.decodeResource(
-                            context.resources,
-                            R.drawable.maplibre_marker_icon_default
-                        )
+                        val drawable = ContextCompat.getDrawable(context, R.drawable.maplibre_marker_icon_default)
+                        val bitmap = drawable?.toBitmap()
                         if (bitmap != null) {
                             style.addImage("marcador", bitmap)
                         }
