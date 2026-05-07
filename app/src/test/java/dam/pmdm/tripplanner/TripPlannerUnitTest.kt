@@ -17,6 +17,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 1: Un viaje cuya fecha de inicio es futura debe tener estado PLANIFICADO.
+     * Entrada: fechaInicio = ahora + 10 días, fechaFin = ahora + 20 días
+     * Salida esperada: "PLANIFICADO"
      */
     @Test
     fun viaje_fechaFutura_estadoPlanificado() {
@@ -35,6 +37,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 2: Un viaje cuya fecha de fin es pasada debe tener estado FINALIZADO.
+     * Entrada: fechaInicio = ahora - 20 días, fechaFin = ahora - 5 días
+     * Salida esperada: "FINALIZADO"
      */
     @Test
     fun viaje_fechaPasada_estadoFinalizado() {
@@ -53,6 +57,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 3: Un viaje cuya fecha actual está entre inicio y fin debe tener estado EN_CURSO.
+     * Entrada: fechaInicio = ahora - 5 días, fechaFin = ahora + 5 días
+     * Salida esperada: "EN_CURSO"
      */
     @Test
     fun viaje_fechaActual_estadoEnCurso() {
@@ -75,6 +81,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 4: El total de gastos debe ser la suma de todos los importes.
+     * Entrada: gastos de 50, 30 y 20 euros
+     * Salida esperada: 100.0
      */
     @Test
     fun gastos_totalCorrecto() {
@@ -91,6 +99,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 5: El total de una lista vacía de gastos debe ser 0.
+     * Entrada: lista vacía
+     * Salida esperada: 0.0
      */
     @Test
     fun gastos_listaVacia_totalCero() {
@@ -101,6 +111,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 6: El reparto de un gasto entre N participantes debe ser importe / N.
+     * Entrada: importe = 90, participantes = 3
+     * Salida esperada: 30.0 por persona
      */
     @Test
     fun gastos_repartoCorrecto() {
@@ -118,6 +130,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 7: El presupuesto restante es la diferencia entre presupuesto y total gastado.
+     * Entrada: presupuesto = 500, gastos = 100 + 150
+     * Salida esperada: 250.0
      */
     @Test
     fun gastos_presupuestoRestanteCorrecto() {
@@ -134,6 +148,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 8: Si el total gastado supera el presupuesto, el restante debe ser negativo.
+     * Entrada: presupuesto = 100, gastos = 80 + 50
+     * Salida esperada: restante < 0
      */
     @Test
     fun gastos_presupuestoExcedido_restanteNegativo() {
@@ -154,6 +170,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 9: El filtrado de viajes por estado debe devolver solo los viajes con ese estado.
+     * Entrada: 4 viajes con estados PLANIFICADO, EN_CURSO, PLANIFICADO, FINALIZADO
+     * Salida esperada: 2 viajes PLANIFICADO
      */
     @Test
     fun viajes_filtradoPorEstado_correcto() {
@@ -171,6 +189,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 10: El filtrado de viajes por nombre debe ser insensible a mayúsculas.
+     * Entrada: búsqueda "París" en lista de 3 viajes
+     * Salida esperada: 1 resultado con nombre "Viaje a París"
      */
     @Test
     fun viajes_busquedaPorNombre_insensibleMayusculas() {
@@ -190,6 +210,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 11: El filtrado de viajes por destino debe funcionar correctamente.
+     * Entrada: búsqueda "España" en lista de 3 viajes
+     * Salida esperada: 2 resultados
      */
     @Test
     fun viajes_busquedaPorDestino_correcto() {
@@ -208,41 +230,88 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 12: Con exactamente 5 participantes el límite debe estar alcanzado.
+     * Entrada: lista dinámica con 5 participantes
+     * Salida esperada: limiteAlcanzado = true
      */
     @Test
     fun participantes_limiteMaximo_correcto() {
-        val participantes = mutableListOf("u1", "u2", "u3", "u4", "u5")
-        val limiteAlcanzado = participantes.size >= 5
+        val participantes = mutableListOf<String>()
+        repeat(5) { participantes.add("u$it") }
+        val numParticipantes = participantes.size
+        val limiteAlcanzado = numParticipantes >= 5
         assertTrue(limiteAlcanzado)
     }
 
     /**
      * Prueba 13: Con menos de 5 participantes el límite no debe estar alcanzado.
+     * Entrada: lista dinámica con 3 participantes
+     * Salida esperada: limiteAlcanzado = false
      */
     @Test
     fun participantes_limiteNoAlcanzado_correcto() {
-        val participantes = mutableListOf("u1", "u2", "u3")
-        val limiteAlcanzado = participantes.size >= 5
+        val participantes = mutableListOf<String>()
+        repeat(3) { participantes.add("u$it") }
+        val numParticipantes = participantes.size
+        val limiteAlcanzado = numParticipantes >= 5
         assertFalse(limiteAlcanzado)
+    }
+
+    /**
+     * Prueba 14: La duración de un viaje en días debe calcularse correctamente.
+     * Entrada: fechaInicio = hoy, fechaFin = hoy + 7 días
+     * Salida esperada: 7 días
+     */
+    @Test
+    fun viaje_duracionEnDias_correcto() {
+        val ahora = System.currentTimeMillis()
+        val fechaFin = ahora + 7 * 24 * 60 * 60 * 1000L
+
+        val dias = ((fechaFin - ahora) / (1000 * 60 * 60 * 24)).toInt()
+
+        assertEquals(7, dias)
+    }
+
+    /**
+     * Prueba 15: Los gastos agrupados por categoría deben sumar correctamente.
+     * Entrada: 2 gastos de COMIDA (40+30) y 1 de TRANSPORTE (30)
+     * Salida esperada: COMIDA = 70.0, TRANSPORTE = 30.0
+     */
+    @Test
+    fun gastos_agrupadosPorCategoria_correcto() {
+        val gastos = listOf(
+            crearGasto("g1", 40.0, "COMIDA"),
+            crearGasto("g2", 30.0, "COMIDA"),
+            crearGasto("g3", 30.0, "TRANSPORTE")
+        )
+
+        val porCategoria = gastos.groupBy { it.categoria }
+            .mapValues { (_, lista) -> lista.sumOf { it.importe } }
+
+        assertEquals(70.0, porCategoria["COMIDA"] ?: 0.0, 0.01)
+        assertEquals(30.0, porCategoria["TRANSPORTE"] ?: 0.0, 0.01)
     }
 
     // ============================================================
     // FUNCIONES AUXILIARES
     // ============================================================
 
-    /** Crea un GastoEntity de prueba con el id e importe indicados. */
-    private fun crearGasto(id: String, importe: Double) = GastoEntity(
+    /** Crea un GastoEntity de prueba con el id, importe y categoría indicados. */
+    private fun crearGasto(
+        id: String,
+        importe: Double,
+        categoria: String = "OTROS"
+    ) = GastoEntity(
         idGasto = id,
         idViaje = "viaje_test",
         idPagador = "usuario_test",
         nombrePagador = "Usuario Test",
         concepto = "Gasto de prueba",
         importe = importe,
-        categoria = "OTROS",
+        categoria = categoria,
         fecha = System.currentTimeMillis()
     )
 
-    /** Crea un ViajeEntity de prueba con el id, estado y nombre indicados. */
+    /** Crea un ViajeEntity de prueba con el id, estado, nombre y destino indicados. */
     private fun crearViaje(
         id: String,
         estado: String,
