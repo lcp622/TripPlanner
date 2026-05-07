@@ -1,6 +1,6 @@
 package dam.pmdm.tripplanner.ui.viajes
 
-import android.graphics.BitmapFactory
+
 import android.os.Bundle
 import android.util.Log
 import androidx.compose.foundation.layout.*
