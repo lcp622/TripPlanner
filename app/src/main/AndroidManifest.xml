@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    >
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Permiso para acceso a internet: necesario para Firebase y MapTiler -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Permiso para mostrar notificaciones locales y colaborativas -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Permiso de lectura de almacenamiento externo solo hasta Android 12 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+
+    <!-- Permiso para detectar el estado de la conexión de red -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!--
+        Aplicación principal de TripPlanner.
+        Usa el tema Starting para mostrar el splash screen al iniciar.
+        El icono personalizado se define en mipmap/tripplanericon.
+    -->
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -17,12 +28,16 @@
         android:roundIcon="@mipmap/tripplanericon_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TripPlanner.Starting">
+
+        <!--
+            Actividad principal de la app.
+            Usa Theme.TripPlanner (sin barra) una vez cargado el splash.
+            exported=true es necesario para que el sistema pueda lanzarla.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.TripPlanner"
-            >
-
+            android:theme="@style/Theme.TripPlanner">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
