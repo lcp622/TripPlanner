@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,8 +26,23 @@ import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.platform.LocalLocale
 
+/**
+ * Pantalla principal de viajes que muestra la lista de viajes del usuario.
+ * Incluye buscador por nombre/destino y filtros por estado del viaje.
+ *
+ * Gestiona tres estados de UI a través de [ViajeViewModel.uiState]:
+ * - [ViajeUiState.Loading]: muestra un indicador circular
+ * - [ViajeUiState.Error]: muestra el mensaje de error
+ * - [ViajeUiState.Success]: muestra la lista filtrada de viajes
+ *
+ * Cuando la lista está vacía muestra un estado vacío con instrucciones.
+ * Cuando el filtro no encuentra resultados muestra un mensaje de búsqueda vacía.
+ *
+ * @param viewModel ViewModel que gestiona la lista de viajes
+ * @param onNuevoViaje Callback que navega a la pantalla de crear viaje
+ * @param onViajeClick Callback que navega al detalle del viaje con su id
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ViajesScreen(
@@ -35,7 +51,11 @@ fun ViajesScreen(
     onViajeClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    /** Texto de búsqueda para filtrar viajes por nombre o destino */
     var textoBusqueda by remember { mutableStateOf("") }
+
+    /** Estado seleccionado para filtrar — "TODOS" muestra todos los viajes */
     var filtroEstado by remember { mutableStateOf("TODOS") }
 
     Scaffold(
@@ -49,6 +69,7 @@ fun ViajesScreen(
                             fontSize = 22.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        // Subtítulo dinámico con el número de viajes cargados
                         Text(
                             text = when (val s = uiState) {
                                 is ViajeUiState.Success -> "${s.viajes.size} viajes planificados"
@@ -84,6 +105,7 @@ fun ViajesScreen(
                 .padding(padding)
         ) {
             when (val state = uiState) {
+                // Estado de carga inicial
                 is ViajeUiState.Loading -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
@@ -94,6 +116,7 @@ fun ViajesScreen(
                         Text(text = "Cargando viajes...", color = TripTextSecondary)
                     }
                 }
+                // Estado de error al cargar desde Firestore
                 is ViajeUiState.Error -> {
                     Text(
                         text = state.mensaje,
@@ -102,6 +125,7 @@ fun ViajesScreen(
                     )
                 }
                 is ViajeUiState.Success -> {
+                    // Aplicar filtros de búsqueda y estado sobre la lista de viajes
                     val viajesFiltrados = state.viajes
                         .filter { viaje ->
                             (textoBusqueda.isBlank() ||
@@ -110,6 +134,7 @@ fun ViajesScreen(
                                     (filtroEstado == "TODOS" || viaje.estado == filtroEstado)
                         }
 
+                    // Estado vacío cuando el usuario no tiene ningún viaje
                     if (state.viajes.isEmpty()) {
                         Column(
                             modifier = Modifier.align(Alignment.Center),
@@ -136,6 +161,7 @@ fun ViajesScreen(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
+                            // Campo de búsqueda por nombre o destino
                             item {
                                 OutlinedTextField(
                                     value = textoBusqueda,
@@ -150,6 +176,7 @@ fun ViajesScreen(
                                 )
                             }
 
+                            // Chips de filtro por estado del viaje
                             item {
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     listOf("TODOS", "PLANIFICADO", "EN_CURSO", "FINALIZADO").forEach { estado ->
@@ -173,6 +200,7 @@ fun ViajesScreen(
                                 }
                             }
 
+                            // Estado vacío cuando el filtro no encuentra resultados
                             if (viajesFiltrados.isEmpty()) {
                                 item {
                                     Box(
@@ -192,6 +220,7 @@ fun ViajesScreen(
                                     }
                                 }
                             } else {
+                                // Lista de viajes filtrados
                                 items(viajesFiltrados) { viaje ->
                                     ViajeCard(
                                         viaje = viaje,
@@ -207,17 +236,30 @@ fun ViajesScreen(
     }
 }
 
+/**
+ * Tarjeta visual que muestra el resumen de un viaje.
+ * Tiene una cabecera con degradado azul que muestra nombre, destino y propietario,
+ * una etiqueta de estado en la esquina superior derecha, y una sección inferior
+ * con la descripción, fecha de inicio y presupuesto.
+ *
+ * @param viaje Entidad del viaje a mostrar
+ * @param onClick Callback que se ejecuta al pulsar la tarjeta
+ */
 @Composable
 fun ViajeCard(
     viaje: ViajeEntity,
     onClick: () -> Unit
 ) {
     val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
+
+    /** Color del badge de estado según el estado del viaje */
     val estadoColor = when (viaje.estado) {
         "PLANIFICADO" -> ColorPlanificado
         "EN_CURSO" -> ColorEnCurso
         else -> ColorFinalizado
     }
+
+    /** Degradado de la cabecera de la tarjeta en colores de la app */
     val gradientColors = listOf(
         TripBlue.copy(alpha = 0.8f),
         TripTeal.copy(alpha = 0.6f)
@@ -229,6 +271,7 @@ fun ViajeCard(
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
+        // Cabecera con degradado y datos principales del viaje
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -260,6 +303,7 @@ fun ViajeCard(
                         color = Color.White.copy(alpha = 0.9f)
                     )
                 }
+                // Mostrar propietario solo si tiene nombre (viajes compartidos)
                 if (viaje.nombrePropietario.isNotBlank()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -278,6 +322,7 @@ fun ViajeCard(
                 }
             }
 
+            // Badge de estado en la esquina superior derecha
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -300,11 +345,13 @@ fun ViajeCard(
             }
         }
 
+        // Sección inferior con descripción, fecha y presupuesto
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp)
         ) {
+            // Mostrar descripción solo si existe, truncada a 2 líneas
             viaje.descripcion?.let {
                 Text(
                     text = it,

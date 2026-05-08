@@ -22,6 +22,21 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dam.pmdm.tripplanner.ui.theme.*
 
+/**
+ * Pantalla de registro de nuevos usuarios en TripPlanner.
+ * Muestra un formulario con nombre, email, contraseña y confirmación
+ * sobre un fondo degradado idéntico al de [LoginScreen].
+ *
+ * Realiza dos niveles de validación:
+ * - [errorLocal]: validaciones locales antes de llamar al ViewModel
+ *   (campos vacíos, contraseñas no coinciden, longitud mínima)
+ * - [AuthUiState.Error]: errores devueltos por Firebase Auth
+ *   (email ya registrado, contraseña débil, etc.)
+ *
+ * @param onRegistroExitoso Callback que se ejecuta al registrarse correctamente
+ * @param onVolverALogin Callback que navega de vuelta a la pantalla de login
+ * @param viewModel ViewModel que gestiona la lógica de autenticación
+ */
 @Composable
 fun RegisterScreen(
     onRegistroExitoso: () -> Unit,
@@ -34,8 +49,11 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmarPassword by remember { mutableStateOf("") }
+
+    /** Error de validación local mostrado antes de llamar al ViewModel */
     var errorLocal by remember { mutableStateOf("") }
 
+    // Navegar automáticamente cuando el registro es exitoso
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
             onRegistroExitoso()
@@ -43,6 +61,7 @@ fun RegisterScreen(
         }
     }
 
+    // Fondo con degradado vertical en colores de la app
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -60,6 +79,7 @@ fun RegisterScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Icono de la app
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -87,6 +107,7 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Tarjeta blanca con el formulario de registro
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -108,6 +129,7 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
+                    // Campo de nombre
                     OutlinedTextField(
                         value = nombre,
                         onValueChange = { nombre = it },
@@ -127,6 +149,7 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Campo de email
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -147,6 +170,7 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Campo de contraseña con caracteres ocultos
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
@@ -168,6 +192,7 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Campo de confirmación de contraseña
                     OutlinedTextField(
                         value = confirmarPassword,
                         onValueChange = { confirmarPassword = it },
@@ -189,6 +214,7 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // Mostrar error de validación local
                     if (errorLocal.isNotEmpty()) {
                         Text(
                             text = errorLocal,
@@ -197,6 +223,7 @@ fun RegisterScreen(
                         )
                     }
 
+                    // Mostrar error devuelto por Firebase Auth
                     if (uiState is AuthUiState.Error) {
                         Text(
                             text = (uiState as AuthUiState.Error).mensaje,
@@ -207,8 +234,10 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Botón de registro con validación local previa
                     Button(
                         onClick = {
+                            // Validar campos antes de llamar al ViewModel
                             when {
                                 nombre.isBlank() -> errorLocal = "El nombre es obligatorio"
                                 email.isBlank() -> errorLocal = "El email es obligatorio"
@@ -227,6 +256,7 @@ fun RegisterScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = TripBlue)
                     ) {
+                        // Mostrar spinner durante la carga o texto normal
                         if (uiState is AuthUiState.Loading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
@@ -243,6 +273,7 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Enlace para volver al login
                     TextButton(
                         onClick = onVolverALogin,
                         modifier = Modifier.fillMaxWidth()

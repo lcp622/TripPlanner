@@ -20,6 +20,19 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dam.pmdm.tripplanner.ui.theme.*
 
+/**
+ * Pantalla de inicio de sesión de TripPlanner.
+ * Muestra un formulario con email y contraseña sobre un fondo degradado.
+ *
+ * Gestiona tres estados de UI a través de [AuthViewModel.uiState]:
+ * - Loading: muestra un indicador circular en el botón
+ * - Success: navega automáticamente a la pantalla principal
+ * - Error: muestra el mensaje de error bajo el formulario
+ *
+ * @param onLoginExitoso Callback que se ejecuta al iniciar sesión correctamente
+ * @param onIrARegistro Callback que navega a la pantalla de registro
+ * @param viewModel ViewModel que gestiona la lógica de autenticación
+ */
 @Composable
 fun LoginScreen(
     onLoginExitoso: () -> Unit,
@@ -30,6 +43,7 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
+    // Navegar automáticamente cuando el login es exitoso
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
             onLoginExitoso()
@@ -37,6 +51,7 @@ fun LoginScreen(
         }
     }
 
+    // Fondo con degradado vertical en colores de la app
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -53,6 +68,7 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Icono de la app
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -80,6 +96,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
+            // Tarjeta blanca con el formulario de login
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
@@ -101,6 +118,7 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
+                    // Campo de email
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
@@ -121,6 +139,7 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Campo de contraseña con caracteres ocultos
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
@@ -142,6 +161,7 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // Mostrar mensaje de error si el login falla
                     if (uiState is AuthUiState.Error) {
                         Text(
                             text = (uiState as AuthUiState.Error).mensaje,
@@ -152,6 +172,7 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Botón de login — deshabilitado durante la carga
                     Button(
                         onClick = { viewModel.login(email, password) },
                         enabled = uiState !is AuthUiState.Loading,
@@ -161,6 +182,7 @@ fun LoginScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = TripBlue)
                     ) {
+                        // Mostrar spinner durante la carga o texto normal
                         if (uiState is AuthUiState.Loading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
@@ -177,6 +199,7 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    // Enlace para navegar al registro
                     TextButton(
                         onClick = onIrARegistro,
                         modifier = Modifier.fillMaxWidth()

@@ -9,6 +9,8 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,6 +22,20 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+/**
+ * Pantalla para la creación de una nueva actividad dentro de un itinerario de viaje.
+ *
+ * Esta pantalla proporciona un formulario completo que incluye:
+ * - Validación de campos obligatorios (título y fecha).
+ * - Selectores nativos de fecha ([DatePicker]) y hora ([TimePicker]).
+ * - Control de errores lógicos (ej: la hora de fin no puede ser anterior a la de inicio).
+ * - Integración con el [ActividadViewModel] para la persistencia de datos.
+ *
+ * @param idViaje Identificador único del viaje al que se añadirá la actividad.
+ * @param viewModel ViewModel encargado de procesar la lógica de negocio y persistencia.
+ * @param onActividadCreada Callback que se ejecuta tras guardar correctamente la actividad (ej: navegar hacia atrás).
+ * @param onVolver Callback para gestionar la navegación hacia atrás sin guardar.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrearActividadScreen(
@@ -28,15 +44,18 @@ fun CrearActividadScreen(
     onActividadCreada: () -> Unit,
     onVolver: () -> Unit
 ) {
+    // Estados para los campos del formulario
     var titulo by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var lugar by remember { mutableStateOf("") }
     var errorGeneral by remember { mutableStateOf("") }
 
+    // Estados para la selección de tiempo y fecha
     var fechaSeleccionada by remember { mutableStateOf<LocalDate?>(null) }
     var horaInicioSeleccionada by remember { mutableStateOf<LocalTime?>(null) }
     var horaFinSeleccionada by remember { mutableStateOf<LocalTime?>(null) }
 
+    // Lógica de validación reactiva
     val errorTitulo = if (titulo.isNotBlank() && titulo.length < 3)
         "El título debe tener al menos 3 caracteres" else ""
     val errorHoras = if (horaInicioSeleccionada != null && horaFinSeleccionada != null &&
@@ -46,10 +65,12 @@ fun CrearActividadScreen(
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
+    // Estados para controlar la visibilidad de los diálogos selectores
     val mostrarPickerFecha = remember { mutableStateOf(false) }
     val mostrarPickerHoraInicio = remember { mutableStateOf(false) }
     val mostrarPickerHoraFin = remember { mutableStateOf(false) }
 
+    // Estados de los componentes Material3 para selección de fecha y hora
     val fechaPickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis()
     )
@@ -64,6 +85,7 @@ fun CrearActividadScreen(
         is24Hour = true
     )
 
+    // Diálogo para selección de fecha
     if (mostrarPickerFecha.value) {
         DatePickerDialog(
             onDismissRequest = { mostrarPickerFecha.value = false },
@@ -84,6 +106,7 @@ fun CrearActividadScreen(
         }
     }
 
+    // Diálogo para selección de hora de inicio
     if (mostrarPickerHoraInicio.value) {
         AlertDialog(
             onDismissRequest = { mostrarPickerHoraInicio.value = false },
@@ -100,6 +123,7 @@ fun CrearActividadScreen(
         )
     }
 
+    // Diálogo para selección de hora de fin
     if (mostrarPickerHoraFin.value) {
         AlertDialog(
             onDismissRequest = { mostrarPickerHoraFin.value = false },
@@ -150,6 +174,7 @@ fun CrearActividadScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Campo: Título
             OutlinedTextField(
                 value = titulo,
                 onValueChange = { titulo = it },
@@ -163,6 +188,7 @@ fun CrearActividadScreen(
                 } else null
             )
 
+            // Campo: Fecha (Solo lectura, abre Picker)
             OutlinedTextField(
                 value = fechaSeleccionada?.format(dateFormatter) ?: "",
                 onValueChange = {},
@@ -178,6 +204,7 @@ fun CrearActividadScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Campo: Hora Inicio (Solo lectura, abre Picker)
             OutlinedTextField(
                 value = horaInicioSeleccionada?.format(timeFormatter) ?: "",
                 onValueChange = {},
@@ -193,6 +220,7 @@ fun CrearActividadScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Campo: Hora Fin (Solo lectura, abre Picker)
             OutlinedTextField(
                 value = horaFinSeleccionada?.format(timeFormatter) ?: "",
                 onValueChange = {},
@@ -212,6 +240,7 @@ fun CrearActividadScreen(
                 } else null
             )
 
+            // Campo: Lugar
             OutlinedTextField(
                 value = lugar,
                 onValueChange = { lugar = it },
@@ -221,6 +250,7 @@ fun CrearActividadScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Campo: Descripción
             OutlinedTextField(
                 value = descripcion,
                 onValueChange = { descripcion = it },
@@ -231,10 +261,12 @@ fun CrearActividadScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Mensaje de error consolidado
             if (errorGeneral.isNotEmpty()) {
                 Text(text = errorGeneral, color = MaterialTheme.colorScheme.error)
             }
 
+            // Botón de guardado con validación final
             Button(
                 onClick = {
                     when {
@@ -246,6 +278,8 @@ fun CrearActividadScreen(
                             val fechaLong = fechaSeleccionada!!
                                 .atStartOfDay(ZoneId.systemDefault())
                                 .toInstant().toEpochMilli()
+
+                            // Guardar mediante el ViewModel
                             viewModel.crearActividad(
                                 idViaje = idViaje,
                                 titulo = titulo,

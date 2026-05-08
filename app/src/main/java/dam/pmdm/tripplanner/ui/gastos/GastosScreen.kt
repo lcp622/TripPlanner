@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,18 +24,33 @@ import dam.pmdm.tripplanner.ui.theme.*
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.platform.LocalLocale
 
+/**
+ * Pantalla que muestra un resumen global de todos los gastos del usuario.
+ * Agrega los gastos de todos los viajes propios y compartidos del usuario,
+ * mostrando el total gastado, un gráfico circular por categoría y
+ * los gastos más recientes.
+ *
+ * Se carga directamente desde Firestore sin pasar por un ViewModel
+ * para simplificar la implementación de esta vista de solo lectura.
+ */
 @Composable
 fun GastosScreen() {
+    /** Lista completa de gastos de todos los viajes del usuario */
     var todosGastos by remember { mutableStateOf<List<GastoEntity>>(emptyList()) }
+
+    /** Mapa de idViaje a nombre del viaje para mostrar en cada gasto */
     var nombresViajes by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+
+    /** Indica si los datos están cargándose desde Firestore */
     var isLoading by remember { mutableStateOf(true) }
 
+    // Cargar todos los gastos del usuario al entrar en la pantalla
     LaunchedEffect(Unit) {
         val user = FirebaseAuth.getInstance().currentUser ?: return@LaunchedEffect
         val firestore = FirebaseFirestore.getInstance()
 
+        // Obtener viajes propios y compartidos
         val viajesPropios = firestore.collection("viajes")
             .whereEqualTo("idPropietario", user.uid)
             .get().await()
@@ -46,6 +62,7 @@ fun GastosScreen() {
         val todosViajes = (viajesPropios.documents + viajesParticipante.documents)
             .distinctBy { it.id }
 
+        // Construir mapa de nombres de viajes para mostrar en cada gasto
         val nombres = mutableMapOf<String, String>()
         todosViajes.forEach { viajeDoc ->
             val nombre = viajeDoc.getString("nombre") ?: "Viaje"
@@ -53,6 +70,7 @@ fun GastosScreen() {
         }
         nombresViajes = nombres
 
+        // Cargar gastos de cada viaje y ordenar por fecha descendente
         val gastos = mutableListOf<GastoEntity>()
         todosViajes.forEach { viajeDoc ->
             val gastosSnapshot = firestore.collection("viajes")
@@ -69,10 +87,14 @@ fun GastosScreen() {
         isLoading = false
     }
 
+    /** Suma total de todos los gastos */
     val totalGastado = todosGastos.sumOf { it.importe }
+
+    /** Gastos agrupados por categoría con su importe total */
     val gastosPorCategoria = todosGastos.groupBy { it.categoria }
         .mapValues { (_, gastos) -> gastos.sumOf { it.importe } }
 
+    /** Colores asignados a cada categoría para el gráfico y tarjetas */
     val categoriaColores = mapOf(
         "ALOJAMIENTO" to Color(0xFF9C27B0),
         "TRANSPORTE" to Color(0xFF2196F3),
@@ -97,6 +119,7 @@ fun GastosScreen() {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Cabecera de la pantalla
                 item {
                     Text(
                         text = "Mis Gastos",
@@ -112,6 +135,7 @@ fun GastosScreen() {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
+                // Tarjeta resumen con el total gastado
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -142,6 +166,7 @@ fun GastosScreen() {
                     }
                 }
 
+                // Gráfico circular solo si hay datos
                 if (gastosPorCategoria.isNotEmpty() && totalGastado > 0) {
                     item {
                         GraficoPorCategoria(
@@ -152,6 +177,7 @@ fun GastosScreen() {
                     }
                 }
 
+                // Sección de gastos por categoría con barra de progreso
                 if (gastosPorCategoria.isNotEmpty()) {
                     item {
                         Text(
@@ -163,6 +189,7 @@ fun GastosScreen() {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
+                    // Ordenar categorías por importe descendente
                     items(gastosPorCategoria.entries.sortedByDescending { it.value }.toList()) { (categoria, importe) ->
                         val color = categoriaColores[categoria] ?: TripGray
                         val porcentaje = if (totalGastado > 0) (importe / totalGastado * 100).toInt() else 0
@@ -205,6 +232,7 @@ fun GastosScreen() {
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
+                                // Barra de progreso proporcional al porcentaje del total
                                 LinearProgressIndicator(
                                     progress = { porcentaje / 100f },
                                     modifier = Modifier
@@ -218,6 +246,7 @@ fun GastosScreen() {
                     }
                 }
 
+                // Sección de gastos recientes — máximo 10 para no saturar la pantalla
                 if (todosGastos.isNotEmpty()) {
                     item {
                         Spacer(modifier = Modifier.height(4.dp))
@@ -238,6 +267,7 @@ fun GastosScreen() {
                     }
                 }
 
+                // Estado vacío cuando no hay gastos
                 if (todosGastos.isEmpty()) {
                     item {
                         Box(
@@ -267,12 +297,24 @@ fun GastosScreen() {
     }
 }
 
+/**
+ * Componente que muestra un gráfico circular (donut) con la distribución
+ * de gastos por categoría y una leyenda con los importes.
+ *
+ * Se elige un gráfico circular porque permite visualizar de forma intuitiva
+ * la proporción de cada categoría sobre el total gastado.
+ *
+ * @param gastosPorCategoria Mapa de categoría a importe total
+ * @param totalGastado Suma total de todos los gastos para calcular porcentajes
+ * @param categoriaColores Mapa de categoría a color para el gráfico
+ */
 @Composable
 fun GraficoPorCategoria(
     gastosPorCategoria: Map<String, Double>,
     totalGastado: Double,
     categoriaColores: Map<String, Color>
 ) {
+    /** Lista de pares categoría-ángulo calculados proporcionalmente al total */
     val angulos = gastosPorCategoria.entries.map { (categoria, importe) ->
         categoria to (importe / totalGastado * 360f).toFloat()
     }
@@ -294,6 +336,7 @@ fun GraficoPorCategoria(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Dibujar gráfico circular con un círculo blanco central (efecto donut)
             Canvas(modifier = Modifier.size(180.dp)) {
                 var startAngle = -90f
                 angulos.forEach { (categoria, angulo) ->
@@ -307,6 +350,7 @@ fun GraficoPorCategoria(
                     )
                     startAngle += angulo
                 }
+                // Círculo blanco central para crear efecto donut
                 drawCircle(
                     color = Color.White,
                     radius = size.minDimension / 3.5f
@@ -315,6 +359,7 @@ fun GraficoPorCategoria(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Leyenda con color, icono, categoría e importe
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 gastosPorCategoria.entries.sortedByDescending { it.value }.forEach { (categoria, importe) ->
                     val color = categoriaColores[categoria] ?: Color.Gray
@@ -357,9 +402,18 @@ fun GraficoPorCategoria(
     }
 }
 
+/**
+ * Tarjeta que muestra el resumen de un gasto individual.
+ * Muestra el icono de la categoría, concepto, fecha, viaje e importe.
+ *
+ * @param gasto Entidad del gasto a mostrar
+ * @param nombreViaje Nombre del viaje al que pertenece el gasto
+ */
 @Composable
-fun GastoResumenCard(gasto: GastoEntity, nombreViaje: String = "")  {
+fun GastoResumenCard(gasto: GastoEntity, nombreViaje: String = "") {
     val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
+
+    /** Color asignado a la categoría del gasto */
     val categoriaColor = when (gasto.categoria) {
         "ALOJAMIENTO" -> Color(0xFF9C27B0)
         "TRANSPORTE" -> Color(0xFF2196F3)
@@ -378,6 +432,7 @@ fun GastoResumenCard(gasto: GastoEntity, nombreViaje: String = "")  {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Icono de la categoría con fondo semitransparente
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -408,6 +463,7 @@ fun GastoResumenCard(gasto: GastoEntity, nombreViaje: String = "")  {
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                // Mostrar el nombre del viaje si está disponible
                 if (nombreViaje.isNotEmpty()) {
                     Text(
                         text = "✈️ $nombreViaje",

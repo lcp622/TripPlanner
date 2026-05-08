@@ -15,7 +15,7 @@ import androidx.room.PrimaryKey
  * Se indexa por [idPropietario] y [estado] para optimizar las consultas
  * de viajes filtrados por usuario y por estado.
  *
- * El campo [participantesIds] almacena los UIDs de todos los participantes
+ * El campo [participantesIds] almacena los UID de todos los participantes
  * del viaje como lista — se usa en Firestore para consultar los viajes
  * donde el usuario es participante sin necesidad de índices compuestos.
  * Room serializa esta lista usando [dam.pmdm.tripplanner.data.local.Converters].
@@ -33,7 +33,7 @@ import androidx.room.PrimaryKey
  * @property estado Estado del viaje: PLANIFICADO, EN_CURSO o FINALIZADO
  * @property idPropietario UID de Firebase del usuario que creó el viaje
  * @property nombrePropietario Nombre del propietario para mostrar sin consultas adicionales
- * @property participantesIds Lista de UIDs de todos los participantes del viaje
+ * @property participantesIds Lista de UID de todos los participantes del viaje
  */
 @Entity(
     tableName = "VIAJE",

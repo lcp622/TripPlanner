@@ -7,16 +7,30 @@ import org.junit.Test
 
 /**
  * Batería de pruebas de unidad para los módulos principales de TripPlanner.
- * Se prueban funciones de lógica de negocio sin dependencias externas.
+ * Se prueban funciones de lógica de negocio pura sin dependencias externas
+ * (sin Firebase, sin Room, sin Android), por lo que se ejecutan en la JVM local.
+ *
+ * Organización de las pruebas:
+ * - Pruebas 1-3: cálculo del estado del viaje según fechas
+ * - Pruebas 4-8: cálculo de totales, repartos y presupuesto de gastos
+ * - Pruebas 9-11: filtrado y búsqueda de viajes
+ * - Pruebas 12-13: validación del límite de participantes
+ * - Prueba 14: cálculo de duración del viaje en días
+ * - Prueba 15: agrupación de gastos por categoría
  */
 class TripPlannerUnitTest {
 
     // ============================================================
     // PRUEBAS DE CÁLCULO DE ESTADO DE VIAJE
+    // Validan la lógica de when que determina el estado del viaje
+    // en función de la fecha actual respecto a fechaInicio y fechaFin.
+    // Esta lógica se replica en FirestoreViajeRepository cada vez
+    // que se carga un viaje, por lo que es crítica para la app.
     // ============================================================
 
     /**
      * Prueba 1: Un viaje cuya fecha de inicio es futura debe tener estado PLANIFICADO.
+     * Mecanismo: se calcula el estado con un when sobre la fecha actual.
      * Entrada: fechaInicio = ahora + 10 días, fechaFin = ahora + 20 días
      * Salida esperada: "PLANIFICADO"
      */
@@ -26,6 +40,7 @@ class TripPlannerUnitTest {
         val fechaInicio = ahora + 10 * 24 * 60 * 60 * 1000L
         val fechaFin = ahora + 20 * 24 * 60 * 60 * 1000L
 
+        // El estado se calcula igual que en FirestoreViajeRepository
         val estado = when {
             ahora < fechaInicio -> "PLANIFICADO"
             ahora > fechaFin -> "FINALIZADO"
@@ -37,6 +52,7 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 2: Un viaje cuya fecha de fin es pasada debe tener estado FINALIZADO.
+     * Mecanismo: se calcula el estado con un when sobre la fecha actual.
      * Entrada: fechaInicio = ahora - 20 días, fechaFin = ahora - 5 días
      * Salida esperada: "FINALIZADO"
      */
@@ -57,6 +73,7 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 3: Un viaje cuya fecha actual está entre inicio y fin debe tener estado EN_CURSO.
+     * Mecanismo: se calcula el estado con un when sobre la fecha actual.
      * Entrada: fechaInicio = ahora - 5 días, fechaFin = ahora + 5 días
      * Salida esperada: "EN_CURSO"
      */
@@ -77,10 +94,14 @@ class TripPlannerUnitTest {
 
     // ============================================================
     // PRUEBAS DE CÁLCULO DE GASTOS
+    // Validan la lógica de GastoViewModel.totalGastos() y
+    // GastoRepository.crearRepartoGasto() que dividen el importe
+    // equitativamente entre los participantes del viaje.
     // ============================================================
 
     /**
      * Prueba 4: El total de gastos debe ser la suma de todos los importes.
+     * Mecanismo: se usa sumOf sobre la lista de gastos, igual que totalGastos() en GastoViewModel.
      * Entrada: gastos de 50, 30 y 20 euros
      * Salida esperada: 100.0
      */
@@ -99,6 +120,7 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 5: El total de una lista vacía de gastos debe ser 0.
+     * Mecanismo: sumOf sobre lista vacía debe devolver 0.0 sin errores.
      * Entrada: lista vacía
      * Salida esperada: 0.0
      */
@@ -111,6 +133,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 6: El reparto de un gasto entre N participantes debe ser importe / N.
+     * Mecanismo: división del importe entre el número de participantes,
+     * igual que en GastoRepository.crearRepartoGasto().
      * Entrada: importe = 90, participantes = 3
      * Salida esperada: 30.0 por persona
      */
@@ -123,6 +147,7 @@ class TripPlannerUnitTest {
             mapOf("idUsuario" to "u3", "nombre" to "María")
         )
 
+        // El reparto divide el importe equitativamente entre todos los participantes
         val importePorPersona = importe / participantes.size
 
         assertEquals(30.0, importePorPersona, 0.01)
@@ -130,6 +155,7 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 7: El presupuesto restante es la diferencia entre presupuesto y total gastado.
+     * Mecanismo: resta del presupuesto total menos la suma de gastos.
      * Entrada: presupuesto = 500, gastos = 100 + 150
      * Salida esperada: 250.0
      */
@@ -148,6 +174,7 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 8: Si el total gastado supera el presupuesto, el restante debe ser negativo.
+     * Mecanismo: la resta puede dar negativo — se muestra en rojo en GastosViajeScreen.
      * Entrada: presupuesto = 100, gastos = 80 + 50
      * Salida esperada: restante < 0
      */
@@ -166,12 +193,15 @@ class TripPlannerUnitTest {
 
     // ============================================================
     // PRUEBAS DE FILTRADO DE VIAJES
+    // Validan la lógica de filtrado y búsqueda que se aplica en
+    // ViajesScreen y GastosViajeScreen sobre las listas de viajes.
     // ============================================================
 
     /**
      * Prueba 9: El filtrado de viajes por estado debe devolver solo los viajes con ese estado.
+     * Mecanismo: filter sobre la lista de viajes comparando el campo estado.
      * Entrada: 4 viajes con estados PLANIFICADO, EN_CURSO, PLANIFICADO, FINALIZADO
-     * Salida esperada: 2 viajes PLANIFICADO
+     * Salida esperada: 2 viajes con estado PLANIFICADO
      */
     @Test
     fun viajes_filtradoPorEstado_correcto() {
@@ -189,6 +219,7 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 10: El filtrado de viajes por nombre debe ser insensible a mayúsculas.
+     * Mecanismo: contains con ignoreCase = true, igual que en ViajesScreen.
      * Entrada: búsqueda "París" en lista de 3 viajes
      * Salida esperada: 1 resultado con nombre "Viaje a París"
      */
@@ -210,6 +241,7 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 11: El filtrado de viajes por destino debe funcionar correctamente.
+     * Mecanismo: contains con ignoreCase = true sobre el campo paisDestino.
      * Entrada: búsqueda "España" en lista de 3 viajes
      * Salida esperada: 2 resultados
      */
@@ -228,8 +260,19 @@ class TripPlannerUnitTest {
         assertEquals(2, resultado.size)
     }
 
+    // ============================================================
+    // PRUEBAS DE LÍMITE DE PARTICIPANTES
+    // Validan que el límite de 5 participantes por viaje funciona
+    // correctamente. Este límite se aplica en ParticipantesScreen
+    // antes de llamar a FirestoreViajeRepository.anadirParticipante().
+    // Se usa mutableListOf con repeat() para que el compilador no
+    // pueda calcular el tamaño en tiempo de compilación y así evitar
+    // falsos positivos en las advertencias del compilador.
+    // ============================================================
+
     /**
      * Prueba 12: Con exactamente 5 participantes el límite debe estar alcanzado.
+     * Mecanismo: comparación del tamaño de la lista con el límite de 5.
      * Entrada: lista dinámica con 5 participantes
      * Salida esperada: limiteAlcanzado = true
      */
@@ -244,6 +287,7 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 13: Con menos de 5 participantes el límite no debe estar alcanzado.
+     * Mecanismo: comparación del tamaño de la lista con el límite de 5.
      * Entrada: lista dinámica con 3 participantes
      * Salida esperada: limiteAlcanzado = false
      */
@@ -258,6 +302,7 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 14: La duración de un viaje en días debe calcularse correctamente.
+     * Mecanismo: resta de fechas en milisegundos dividida entre milisegundos por día.
      * Entrada: fechaInicio = hoy, fechaFin = hoy + 7 días
      * Salida esperada: 7 días
      */
@@ -266,6 +311,7 @@ class TripPlannerUnitTest {
         val ahora = System.currentTimeMillis()
         val fechaFin = ahora + 7 * 24 * 60 * 60 * 1000L
 
+        // Conversión de milisegundos a días mediante división entera
         val dias = ((fechaFin - ahora) / (1000 * 60 * 60 * 24)).toInt()
 
         assertEquals(7, dias)
@@ -273,6 +319,8 @@ class TripPlannerUnitTest {
 
     /**
      * Prueba 15: Los gastos agrupados por categoría deben sumar correctamente.
+     * Mecanismo: groupBy sobre la categoría seguido de mapValues con sumOf,
+     * igual que en GastosScreen para el gráfico de distribución por categoría.
      * Entrada: 2 gastos de COMIDA (40+30) y 1 de TRANSPORTE (30)
      * Salida esperada: COMIDA = 70.0, TRANSPORTE = 30.0
      */
@@ -284,6 +332,7 @@ class TripPlannerUnitTest {
             crearGasto("g3", 30.0, "TRANSPORTE")
         )
 
+        // Agrupar gastos por categoría y sumar importes de cada grupo
         val porCategoria = gastos.groupBy { it.categoria }
             .mapValues { (_, lista) -> lista.sumOf { it.importe } }
 
@@ -293,9 +342,19 @@ class TripPlannerUnitTest {
 
     // ============================================================
     // FUNCIONES AUXILIARES
+    // Crean entidades de prueba con valores predefinidos para
+    // simplificar la escritura de los tests y evitar repetición.
     // ============================================================
 
-    /** Crea un GastoEntity de prueba con el id, importe y categoría indicados. */
+    /**
+     * Crea un [GastoEntity] de prueba con el id, importe y categoría indicados.
+     * El resto de campos se rellenan con valores genéricos para las pruebas.
+     *
+     * @param id Identificador único del gasto de prueba
+     * @param importe Importe del gasto en euros
+     * @param categoria Categoría del gasto (por defecto "OTROS")
+     * @return Entidad de gasto lista para usar en las pruebas
+     */
     private fun crearGasto(
         id: String,
         importe: Double,
@@ -311,7 +370,16 @@ class TripPlannerUnitTest {
         fecha = System.currentTimeMillis()
     )
 
-    /** Crea un ViajeEntity de prueba con el id, estado, nombre y destino indicados. */
+    /**
+     * Crea un [ViajeEntity] de prueba con el id, estado, nombre y destino indicados.
+     * Las fechas se calculan automáticamente: inicio = hoy, fin = hoy + 7 días.
+     *
+     * @param id Identificador único del viaje de prueba
+     * @param estado Estado del viaje: PLANIFICADO, EN_CURSO o FINALIZADO
+     * @param nombre Nombre del viaje (por defecto "Viaje Test")
+     * @param destino País o destino del viaje (por defecto "España")
+     * @return Entidad de viaje lista para usar en las pruebas
+     */
     private fun crearViaje(
         id: String,
         estado: String,

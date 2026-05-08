@@ -46,14 +46,11 @@ class Converters {
 
 /**
  * Base de datos local de TripPlanner implementada con Room.
- * Contiene todas las entidades de la aplicación y sus DAOs correspondientes.
+ * Contiene todas las entidades de la aplicación y sus DAO correspondientes.
  *
  * Se usa el patrón Singleton para garantizar una única instancia de la BD
  * en toda la aplicación, evitando problemas de concurrencia.
  *
- * La BD usa [fallbackToDestructiveMigration] para simplificar las migraciones
- * durante el desarrollo — en producción se deberían implementar migraciones
- * incrementales para no perder los datos del usuario.
  *
  * Versión actual: 12
  */

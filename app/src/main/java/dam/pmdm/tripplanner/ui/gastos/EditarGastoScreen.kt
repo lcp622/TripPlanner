@@ -14,6 +14,19 @@ import androidx.compose.ui.unit.sp
 import dam.pmdm.tripplanner.data.local.entity.GastoEntity
 import dam.pmdm.tripplanner.ui.theme.*
 
+/**
+ * Pantalla para editar un gasto existente en un viaje.
+ * Los campos se inicializan con los datos actuales del gasto
+ * para que el usuario solo modifique lo que necesite.
+ *
+ * Realiza las mismas validaciones en tiempo real que [CrearGastoScreen].
+ * No permite modificar el reparto existente — solo los datos del gasto.
+ *
+ * @param gasto Entidad del gasto a editar con sus datos actuales
+ * @param viewModel ViewModel que gestiona la lógica de gastos
+ * @param onGastoActualizado Callback que se ejecuta al guardar los cambios
+ * @param onVolver Callback que navega a la pantalla anterior
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditarGastoScreen(
@@ -22,6 +35,7 @@ fun EditarGastoScreen(
     onGastoActualizado: () -> Unit,
     onVolver: () -> Unit
 ) {
+    // Inicializar campos con los datos actuales del gasto
     var concepto by remember { mutableStateOf(gasto.concepto) }
     var importe by remember { mutableStateOf(gasto.importe.toString()) }
     var notas by remember { mutableStateOf(gasto.notas ?: "") }
@@ -29,6 +43,7 @@ fun EditarGastoScreen(
     var errorGeneral by remember { mutableStateOf("") }
     var expandedCategoria by remember { mutableStateOf(false) }
 
+    // Validaciones en tiempo real sobre los campos del formulario
     val errorConcepto = if (concepto.isNotBlank() && concepto.length < 3)
         "El concepto debe tener al menos 3 caracteres" else ""
     val errorImporte = if (importe.isBlank()) ""
@@ -72,6 +87,7 @@ fun EditarGastoScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Campo de concepto del gasto
             OutlinedTextField(
                 value = concepto,
                 onValueChange = { concepto = it },
@@ -85,6 +101,7 @@ fun EditarGastoScreen(
                 } else null
             )
 
+            // Campo de importe con validación numérica
             OutlinedTextField(
                 value = importe,
                 onValueChange = { importe = it },
@@ -98,6 +115,7 @@ fun EditarGastoScreen(
                 } else null
             )
 
+            // Selector de categoría del gasto
             ExposedDropdownMenuBox(
                 expanded = expandedCategoria,
                 onExpandedChange = { expandedCategoria = it }
@@ -130,6 +148,7 @@ fun EditarGastoScreen(
                 }
             }
 
+            // Campo de notas adicionales opcional
             OutlinedTextField(
                 value = notas,
                 onValueChange = { notas = it },
@@ -144,14 +163,17 @@ fun EditarGastoScreen(
                 Text(text = errorGeneral, color = MaterialTheme.colorScheme.error)
             }
 
+            // Botón de guardar con validación previa
             Button(
                 onClick = {
+                    // Validar campos antes de actualizar el gasto
                     when {
                         concepto.isBlank() -> errorGeneral = "El concepto es obligatorio"
                         importe.isBlank() -> errorGeneral = "El importe es obligatorio"
                         errorImporte.isNotEmpty() -> errorGeneral = errorImporte
                         else -> {
                             errorGeneral = ""
+                            // Actualizar solo los campos modificados manteniendo el resto
                             viewModel.actualizarGasto(
                                 gasto.copy(
                                     concepto = concepto,

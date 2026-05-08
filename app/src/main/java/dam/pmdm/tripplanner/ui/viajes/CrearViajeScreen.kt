@@ -19,6 +19,21 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+/**
+ * Pantalla para crear un nuevo viaje.
+ * Incluye campos para nombre, destino, fechas, presupuesto y descripción.
+ *
+ * Usa [DatePickerDialog] nativo de Material3 para seleccionar fechas,
+ * inicializado en la fecha actual para inicio y en 7 días para fin.
+ *
+ * Realiza validaciones en tiempo real sobre nombre, destino y presupuesto,
+ * y valida la coherencia de fechas antes de permitir crear el viaje.
+ * El propietario se obtiene automáticamente del usuario autenticado en Firebase.
+ *
+ * @param viewModel ViewModel que gestiona la creación del viaje
+ * @param onViajeCreado Callback que se ejecuta al crear el viaje correctamente
+ * @param onVolver Callback que navega a la pantalla anterior
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrearViajeScreen(
@@ -31,6 +46,7 @@ fun CrearViajeScreen(
     var descripcion by remember { mutableStateOf("") }
     var presupuesto by remember { mutableStateOf("") }
 
+    // Validaciones en tiempo real — vacío no es error hasta que el usuario escribe
     val errorNombre = if (nombre.isBlank() && nombre.isNotEmpty().not()) ""
     else if (nombre.isNotBlank() && nombre.length < 3) "El nombre debe tener al menos 3 caracteres"
     else ""
@@ -42,6 +58,7 @@ fun CrearViajeScreen(
     else if (presupuesto.toDouble() < 0) "El presupuesto no puede ser negativo"
     else ""
 
+    /** Fechas seleccionadas — null hasta que el usuario las elige en el DatePicker */
     var fechaInicioSeleccionada by remember { mutableStateOf<LocalDate?>(null) }
     var fechaFinSeleccionada by remember { mutableStateOf<LocalDate?>(null) }
     val errorFechas = if (fechaInicioSeleccionada != null && fechaFinSeleccionada != null &&
@@ -49,18 +66,25 @@ fun CrearViajeScreen(
         "La fecha de fin debe ser posterior a la de inicio" else ""
 
     var errorGeneral by remember { mutableStateOf("") }
+
+    /** Controla la visibilidad del DatePickerDialog de fecha de inicio */
     val mostrarPickerInicio = remember { mutableStateOf(false) }
+
+    /** Controla la visibilidad del DatePickerDialog de fecha de fin */
     val mostrarPickerFin = remember { mutableStateOf(false) }
 
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
+    // Inicializar el DatePicker de inicio en la fecha actual
     val fechaInicioPickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis()
     )
+    // Inicializar el DatePicker de fin 7 días después de hoy
     val fechaFinPickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000L
     )
 
+    // DatePickerDialog nativo de Material3 para la fecha de inicio
     if (mostrarPickerInicio.value) {
         DatePickerDialog(
             onDismissRequest = { mostrarPickerInicio.value = false },
@@ -81,6 +105,7 @@ fun CrearViajeScreen(
         }
     }
 
+    // DatePickerDialog nativo de Material3 para la fecha de fin
     if (mostrarPickerFin.value) {
         DatePickerDialog(
             onDismissRequest = { mostrarPickerFin.value = false },
@@ -135,6 +160,7 @@ fun CrearViajeScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Campo de nombre del viaje
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it },
@@ -148,6 +174,7 @@ fun CrearViajeScreen(
                 } else null
             )
 
+            // Campo de país o destino
             OutlinedTextField(
                 value = paisDestino,
                 onValueChange = { paisDestino = it },
@@ -161,6 +188,7 @@ fun CrearViajeScreen(
                 } else null
             )
 
+            // Campo de fecha de inicio — abre el DatePickerDialog al pulsar el icono
             OutlinedTextField(
                 value = fechaInicioSeleccionada?.format(dateFormatter) ?: "",
                 onValueChange = {},
@@ -176,6 +204,7 @@ fun CrearViajeScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Campo de fecha de fin — abre el DatePickerDialog al pulsar el icono
             OutlinedTextField(
                 value = fechaFinSeleccionada?.format(dateFormatter) ?: "",
                 onValueChange = {},
@@ -195,6 +224,7 @@ fun CrearViajeScreen(
                 } else null
             )
 
+            // Campo de presupuesto con validación numérica
             OutlinedTextField(
                 value = presupuesto,
                 onValueChange = { presupuesto = it },
@@ -208,6 +238,7 @@ fun CrearViajeScreen(
                 } else null
             )
 
+            // Campo de descripción opcional
             OutlinedTextField(
                 value = descripcion,
                 onValueChange = { descripcion = it },
@@ -222,6 +253,7 @@ fun CrearViajeScreen(
                 Text(text = errorGeneral, color = MaterialTheme.colorScheme.error)
             }
 
+            // Botón de creación con validación previa de todos los campos
             Button(
                 onClick = {
                     when {
@@ -233,12 +265,14 @@ fun CrearViajeScreen(
                         errorPresupuesto.isNotEmpty() -> errorGeneral = errorPresupuesto
                         else -> {
                             errorGeneral = ""
+                            // Convertir LocalDate a milisegundos para almacenar en la entidad
                             val inicio = fechaInicioSeleccionada!!
                                 .atStartOfDay(ZoneId.systemDefault())
                                 .toInstant().toEpochMilli()
                             val fin = fechaFinSeleccionada!!
                                 .atStartOfDay(ZoneId.systemDefault())
                                 .toInstant().toEpochMilli()
+                            // Obtener el UID del propietario desde Firebase Auth
                             val idUsuario = FirebaseAuth.getInstance().currentUser?.uid ?: ""
                             viewModel.crearViaje(
                                 nombre = nombre,

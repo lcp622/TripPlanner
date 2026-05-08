@@ -22,21 +22,45 @@ import dam.pmdm.tripplanner.ui.theme.*
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 
-
+/**
+ * Pantalla que permite al usuario modificar sus datos de perfil (nombre y URL de foto).
+ *
+ * Esta pantalla utiliza [FirebaseAuth] para recuperar los datos actuales del usuario y
+ * se apoya en el [AuthViewModel] para realizar las actualizaciones de forma asíncrona.
+ *
+ * Características principales:
+ * - **Vista previa**: Muestra en tiempo real cómo quedaría la foto de perfil al introducir una URL.
+ * - **Validación**: Asegura que el nombre no esté vacío antes de permitir el guardado.
+ * - **Reactividad**: Observa el estado [AuthUiState] para cerrar la pantalla automáticamente
+ *   cuando la actualización es exitosa.
+ *
+ * @param authViewModel ViewModel encargado de la lógica de autenticación y gestión del perfil.
+ * @param onVolver Callback para navegar hacia atrás (al pulsar el botón volver o tras un éxito).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditarPerfilScreen(
     authViewModel: AuthViewModel,
     onVolver: () -> Unit
 ) {
+    // Referencia al usuario actual de Firebase
     val user = FirebaseAuth.getInstance().currentUser
+    // Estado del flujo de actualización desde el ViewModel
     val perfilState by authViewModel.perfilState.collectAsState()
 
+    // Estados locales para los campos del formulario
     var nombre by remember { mutableStateOf(user?.displayName ?: "") }
     var fotoUrl by remember { mutableStateOf(user?.photoUrl?.toString() ?: "") }
     var error by remember { mutableStateOf("") }
 
+    /**
+     * Efecto lanzado cuando el estado del perfil cambia.
+     * Si la actualización es exitosa, resetea el estado y regresa a la pantalla anterior.
+     */
     LaunchedEffect(perfilState) {
         if (perfilState is AuthUiState.Success) {
             authViewModel.resetPerfilState()
@@ -81,6 +105,7 @@ fun EditarPerfilScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Sección de vista previa de la imagen de perfil
             Box(
                 modifier = Modifier
                     .size(100.dp)
@@ -111,6 +136,7 @@ fun EditarPerfilScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            // Campo: Nombre de usuario
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it },
@@ -120,6 +146,7 @@ fun EditarPerfilScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Campo: URL de la foto
             OutlinedTextField(
                 value = fotoUrl,
                 onValueChange = { fotoUrl = it },
@@ -130,10 +157,12 @@ fun EditarPerfilScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Visualización de errores de validación local
             if (error.isNotEmpty()) {
                 Text(text = error, color = MaterialTheme.colorScheme.error)
             }
 
+            // Visualización de errores provenientes del servidor (ViewModel)
             if (perfilState is AuthUiState.Error) {
                 Text(
                     text = (perfilState as AuthUiState.Error).mensaje,
@@ -141,6 +170,7 @@ fun EditarPerfilScreen(
                 )
             }
 
+            // Botón de acción para persistir cambios
             Button(
                 onClick = {
                     if (nombre.isBlank()) {
@@ -161,7 +191,7 @@ fun EditarPerfilScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = TripBlue)
             ) {
                 if (perfilState is AuthUiState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
                 } else {
                     Text("Guardar cambios", fontWeight = FontWeight.Bold)
                 }

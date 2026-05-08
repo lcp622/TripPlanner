@@ -87,7 +87,7 @@ class GastoRepository(private val gastoDao: GastoDao) {
     /**
      * Crea los repartos de un gasto entre los participantes del viaje.
      * El importe se divide equitativamente entre todos los participantes.
-     * El pagador no se incluye en el reparto ya que él ya pagó el gasto.
+     * El pagador no se incluye en el reparto, ya que él ya pagó el gasto.
      *
      * Se almacena como subcolección en Firestore con el UID del usuario
      * como id del documento para facilitar las consultas por usuario.

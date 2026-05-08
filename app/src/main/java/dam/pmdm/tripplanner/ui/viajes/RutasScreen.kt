@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,8 +33,28 @@ import org.maplibre.android.plugins.annotation.Symbol
 import org.maplibre.android.plugins.annotation.SymbolManager
 import org.maplibre.android.plugins.annotation.SymbolOptions
 import java.util.UUID
-import androidx.compose.ui.platform.LocalLocale
 
+/**
+ * Pantalla de rutas y puntos de interés de un viaje.
+ * Muestra un mapa interactivo de MapLibre con los puntos de interés
+ * del viaje marcados con iconos. Permite añadir y eliminar puntos.
+ *
+ * Interacción con el mapa:
+ * - **Mantener pulsado** en el mapa → abre el diálogo para añadir un punto
+ * - **Pulsar un marcador** → abre el diálogo para ver detalles y eliminar el punto
+ *
+ * Los puntos de interés se sincronizan entre Firestore y Room:
+ * - Al cargar la pantalla se obtienen de Firestore y se cachean en Room
+ * - Al añadir un punto se guarda en Firestore y Room simultáneamente
+ * - Al eliminar un punto se borra de Firestore y Room simultáneamente
+ *
+ * Se usa [SymbolManager] del plugin de anotaciones de MapLibre en lugar
+ * de los Markers deprecated para gestionar los iconos en el mapa.
+ * Los datos de cada símbolo (nombre, categoría, descripción) se almacenan
+ * como [JsonObject] en el campo data del símbolo para recuperarlos al pulsar.
+ *
+ * @param idViaje Identificador del viaje cuyos puntos de interés se muestran
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RutasScreen(
@@ -43,21 +64,37 @@ fun RutasScreen(
     val apiKey = BuildConfig.MAPTILER_API_KEY
     val styleUrl = "https://api.maptiler.com/maps/streets/style.json?key=$apiKey"
 
+    /** Controla la visibilidad del diálogo para añadir un nuevo punto */
     val mostrarDialogoAnadir = remember { mutableStateOf(false) }
     val nombrePunto = remember { mutableStateOf("") }
     val descripcionPunto = remember { mutableStateOf("") }
     val categoriaSeleccionada = remember { mutableStateOf("ATRACCION") }
     val expandedCategoria = remember { mutableStateOf(false) }
+
+    /** Coordenadas del punto pulsado en el mapa para añadir un nuevo marcador */
     val latitudSeleccionada = remember { mutableDoubleStateOf(0.0) }
     val longitudSeleccionada = remember { mutableDoubleStateOf(0.0) }
+
+    /** Contador de puntos para calcular el orden de cada nuevo punto */
     val contadorPuntos = remember { mutableIntStateOf(0) }
     val error = remember { mutableStateOf("") }
+
+    /** Referencia al SymbolManager para crear y eliminar marcadores en el mapa */
     val symbolManagerRef = remember { mutableStateOf<SymbolManager?>(null) }
+
+    /** Símbolo seleccionado al pulsar un marcador — activa el diálogo de eliminación */
     val symbolSeleccionado = remember { mutableStateOf<Symbol?>(null) }
+
+    /** Datos del símbolo seleccionado para mostrar en el diálogo de eliminación */
     val nombreSeleccionado = remember { mutableStateOf("") }
     val categoriaSeleccionadaDialogo = remember { mutableStateOf("") }
     val descripcionSeleccionada = remember { mutableStateOf("") }
 
+    /**
+     * Bitmap del icono de marcador cargado fuera del AndroidView para evitar
+     * el warning de LocalContext dentro de lambdas no-Composable.
+     * Se carga una vez con remember para no recrearlo en cada recomposición.
+     */
     val marcadorBitmap = remember {
         val drawable = ContextCompat.getDrawable(context, org.maplibre.android.R.drawable.maplibre_marker_icon_default)
         drawable?.toBitmap()
@@ -65,6 +102,11 @@ fun RutasScreen(
 
     val categorias = listOf("ATRACCION", "RESTAURANTE", "HOTEL", "MUSEO", "MONUMENTO", "OTRO")
 
+    /**
+     * MapView inicializado una sola vez con remember para evitar recrearlo
+     * en cada recomposición y perder el estado del mapa.
+     * Se llama manualmente al ciclo de vida para que funcione fuera de un Fragment.
+     */
     val mapView = remember {
         MapLibre.getInstance(context)
         MapView(context).apply {
@@ -74,6 +116,7 @@ fun RutasScreen(
         }
     }
 
+    // Gestionar el ciclo de vida del mapa al salir de la pantalla
     DisposableEffect(Unit) {
         onDispose {
             try {
@@ -87,6 +130,7 @@ fun RutasScreen(
         }
     }
 
+    // Diálogo de eliminación — se muestra al pulsar un marcador en el mapa
     symbolSeleccionado.value?.let { symbol ->
         AlertDialog(
             onDismissRequest = {
@@ -98,6 +142,7 @@ fun RutasScreen(
             title = { Text(nombreSeleccionado.value.ifBlank { "Punto de interés" }, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
+                    // Mostrar categoría y descripción si están disponibles
                     if (categoriaSeleccionadaDialogo.value.isNotBlank()) {
                         Text(
                             text = categoriaSeleccionadaDialogo.value,
@@ -125,6 +170,7 @@ fun RutasScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        // Buscar y eliminar el punto en Firestore por nombre
                         FirebaseFirestore.getInstance()
                             .collection("viajes").document(idViaje)
                             .collection("puntos_interes")
@@ -134,6 +180,7 @@ fun RutasScreen(
                                 snapshot.documents.forEach { doc ->
                                     val idPunto = doc.getString("idPunto") ?: doc.id
                                     doc.reference.delete()
+                                    // Eliminar también de Room para mantener sincronía
                                     CoroutineScope(Dispatchers.IO).launch {
                                         TripPlannerDatabase.getInstance(context)
                                             .puntoInteresDao()
@@ -141,6 +188,7 @@ fun RutasScreen(
                                     }
                                 }
                             }
+                        // Eliminar el marcador del mapa
                         symbolManagerRef.value?.delete(symbol)
                         contadorPuntos.intValue--
                         symbolSeleccionado.value = null
@@ -166,6 +214,7 @@ fun RutasScreen(
         )
     }
 
+    // Diálogo para añadir un nuevo punto de interés — se muestra al mantener pulsado el mapa
     if (mostrarDialogoAnadir.value) {
         AlertDialog(
             onDismissRequest = {
@@ -177,6 +226,7 @@ fun RutasScreen(
             title = { Text("Añadir punto de interés", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
+                    // Mostrar las coordenadas del punto pulsado para referencia
                     Text(
                         text = "Coordenadas: ${String.format(LocalLocale.current.platformLocale, "%.4f", latitudSeleccionada.doubleValue)}, ${String.format(LocalLocale.current.platformLocale, "%.4f", longitudSeleccionada.doubleValue)}",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -192,6 +242,7 @@ fun RutasScreen(
                         colors = tripTextFieldColors()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                    // Selector de categoría del punto de interés
                     ExposedDropdownMenuBox(
                         expanded = expandedCategoria.value,
                         onExpandedChange = { expandedCategoria.value = it }
@@ -260,11 +311,13 @@ fun RutasScreen(
                                 "orden" to orden
                             )
 
+                            // Guardar en Firestore para sincronización entre participantes
                             FirebaseFirestore.getInstance()
                                 .collection("viajes").document(idViaje)
                                 .collection("puntos_interes")
                                 .add(puntoFirestore)
 
+                            // Cachear en Room para acceso offline
                             CoroutineScope(Dispatchers.IO).launch {
                                 TripPlannerDatabase.getInstance(context)
                                     .puntoInteresDao()
@@ -282,6 +335,7 @@ fun RutasScreen(
                                     )
                             }
 
+                            // Almacenar datos en el símbolo como JsonObject para recuperarlos al pulsar
                             val data = JsonObject().apply {
                                 addProperty("nombre", nombre)
                                 addProperty("categoria", categoria)
@@ -326,6 +380,7 @@ fun RutasScreen(
             factory = {
                 mapView.getMapAsync { map ->
                     map.setStyle(styleUrl) { style ->
+                        // Registrar el icono del marcador en el estilo del mapa
                         if (marcadorBitmap != null) {
                             style.addImage("marcador", marcadorBitmap)
                         }
@@ -335,6 +390,7 @@ fun RutasScreen(
                         symbolManager.textAllowOverlap = true
                         symbolManagerRef.value = symbolManager
 
+                        // Click en marcador: extraer datos del JsonObject y mostrar diálogo
                         symbolManager.addClickListener { symbol ->
                             val obj = symbol.data?.asJsonObject
                             nombreSeleccionado.value = obj?.get("nombre")?.asString ?: "Punto de interés"
@@ -344,6 +400,7 @@ fun RutasScreen(
                             true
                         }
 
+                        // Long click en el mapa: guardar coordenadas y mostrar diálogo de añadir
                         map.addOnMapLongClickListener { point ->
                             latitudSeleccionada.doubleValue = point.latitude
                             longitudSeleccionada.doubleValue = point.longitude
@@ -351,6 +408,7 @@ fun RutasScreen(
                             true
                         }
 
+                        // Cargar puntos existentes desde Firestore al iniciar la pantalla
                         FirebaseFirestore.getInstance()
                             .collection("viajes").document(idViaje)
                             .collection("puntos_interes")
@@ -366,6 +424,7 @@ fun RutasScreen(
                                     val idPunto = doc.getString("idPunto") ?: doc.id
                                     val orden = doc.getLong("orden")?.toInt() ?: 0
 
+                                    // Cachear en Room para acceso offline
                                     CoroutineScope(Dispatchers.IO).launch {
                                         TripPlannerDatabase.getInstance(context)
                                             .puntoInteresDao()
@@ -383,6 +442,7 @@ fun RutasScreen(
                                             )
                                     }
 
+                                    // Crear marcador en el mapa con los datos del punto
                                     val data = JsonObject().apply {
                                         addProperty("nombre", nombre)
                                         addProperty("categoria", categoria)
@@ -400,6 +460,7 @@ fun RutasScreen(
                             }
                     }
 
+                    // Centrar el mapa en España al iniciar
                     map.cameraPosition = CameraPosition.Builder()
                         .target(LatLng(40.4168, -3.7038))
                         .zoom(5.0)
@@ -410,6 +471,7 @@ fun RutasScreen(
             modifier = Modifier.fillMaxSize()
         )
 
+        // Banner de instrucciones de uso del mapa
         Card(
             modifier = Modifier
                 .align(Alignment.TopCenter)

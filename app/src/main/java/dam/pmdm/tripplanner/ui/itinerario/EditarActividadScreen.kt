@@ -9,6 +9,8 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,6 +22,21 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+/**
+ * Pantalla para la edición de una actividad ya existente en el itinerario.
+ *
+ * Carga los datos iniciales de la [actividad] proporcionada y permite al usuario
+ * modificar sus campos. Incluye:
+ * - Validación de longitud de título.
+ * - Validación lógica de horarios (la hora de fin no puede ser previa a la de inicio).
+ * - Selectores de fecha y hora mediante diálogos nativos de Material3.
+ * - Actualización reactiva del estado mediante el [ActividadViewModel].
+ *
+ * @param actividad La entidad de la actividad que se desea modificar.
+ * @param viewModel ViewModel que gestiona la lógica de actualización en la base de datos.
+ * @param onActividadActualizada Callback invocado tras guardar los cambios con éxito.
+ * @param onVolver Callback invocado para regresar a la pantalla anterior sin guardar cambios.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditarActividadScreen(
@@ -28,6 +45,7 @@ fun EditarActividadScreen(
     onActividadActualizada: () -> Unit,
     onVolver: () -> Unit
 ) {
+    // Inicialización del estado con los valores actuales de la actividad
     var titulo by remember { mutableStateOf(actividad.titulo) }
     var descripcion by remember { mutableStateOf(actividad.descripcion ?: "") }
     var lugar by remember { mutableStateOf(actividad.lugar ?: "") }
@@ -36,6 +54,7 @@ fun EditarActividadScreen(
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
+    // Conversión de datos de la entidad a objetos de tiempo de Java 8
     var fechaSeleccionada by remember {
         mutableStateOf(
             Instant.ofEpochMilli(actividad.fecha).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -48,16 +67,19 @@ fun EditarActividadScreen(
         mutableStateOf(actividad.horaFin?.let { LocalTime.parse(it) })
     }
 
+    // Lógica de validación en tiempo real
     val errorTitulo = if (titulo.isNotBlank() && titulo.length < 3)
         "El título debe tener al menos 3 caracteres" else ""
     val errorHoras = if (horaInicioSeleccionada != null && horaFinSeleccionada != null &&
         horaFinSeleccionada!!.isBefore(horaInicioSeleccionada))
         "La hora de fin debe ser posterior a la de inicio" else ""
 
+    // Control de visibilidad de los selectores (Pickers)
     val mostrarPickerFecha = remember { mutableStateOf(false) }
     val mostrarPickerHoraInicio = remember { mutableStateOf(false) }
     val mostrarPickerHoraFin = remember { mutableStateOf(false) }
 
+    // Estados de los componentes Picker de Material3
     val fechaPickerState = rememberDatePickerState(
         initialSelectedDateMillis = actividad.fecha
     )
@@ -72,6 +94,7 @@ fun EditarActividadScreen(
         is24Hour = true
     )
 
+    // Diálogo de Selección de Fecha
     if (mostrarPickerFecha.value) {
         DatePickerDialog(
             onDismissRequest = { mostrarPickerFecha.value = false },
@@ -92,6 +115,7 @@ fun EditarActividadScreen(
         }
     }
 
+    // Diálogo de Selección de Hora de Inicio
     if (mostrarPickerHoraInicio.value) {
         AlertDialog(
             onDismissRequest = { mostrarPickerHoraInicio.value = false },
@@ -108,6 +132,7 @@ fun EditarActividadScreen(
         )
     }
 
+    // Diálogo de Selección de Hora de Fin
     if (mostrarPickerHoraFin.value) {
         AlertDialog(
             onDismissRequest = { mostrarPickerHoraFin.value = false },
@@ -158,6 +183,7 @@ fun EditarActividadScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Campo: Título con validación
             OutlinedTextField(
                 value = titulo,
                 onValueChange = { titulo = it },
@@ -171,6 +197,7 @@ fun EditarActividadScreen(
                 } else null
             )
 
+            // Campo: Fecha
             OutlinedTextField(
                 value = fechaSeleccionada.format(dateFormatter),
                 onValueChange = {},
@@ -186,6 +213,7 @@ fun EditarActividadScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Campo: Hora Inicio
             OutlinedTextField(
                 value = horaInicioSeleccionada?.format(timeFormatter) ?: "",
                 onValueChange = {},
@@ -201,6 +229,7 @@ fun EditarActividadScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Campo: Hora Fin con validación lógica
             OutlinedTextField(
                 value = horaFinSeleccionada?.format(timeFormatter) ?: "",
                 onValueChange = {},
@@ -220,6 +249,7 @@ fun EditarActividadScreen(
                 } else null
             )
 
+            // Campo: Lugar
             OutlinedTextField(
                 value = lugar,
                 onValueChange = { lugar = it },
@@ -229,6 +259,7 @@ fun EditarActividadScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Campo: Descripción
             OutlinedTextField(
                 value = descripcion,
                 onValueChange = { descripcion = it },
@@ -239,10 +270,12 @@ fun EditarActividadScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Mostrar error general si existe
             if (errorGeneral.isNotEmpty()) {
                 Text(text = errorGeneral, color = MaterialTheme.colorScheme.error)
             }
 
+            // Botón para persistir los cambios
             Button(
                 onClick = {
                     when {
@@ -254,6 +287,8 @@ fun EditarActividadScreen(
                             val fechaLong = fechaSeleccionada
                                 .atStartOfDay(ZoneId.systemDefault())
                                 .toInstant().toEpochMilli()
+
+                            // Creamos una copia de la entidad con los valores actualizados
                             viewModel.actualizarActividad(
                                 actividad.copy(
                                     titulo = titulo,

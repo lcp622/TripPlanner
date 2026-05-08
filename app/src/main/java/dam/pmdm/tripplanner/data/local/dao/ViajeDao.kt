@@ -4,7 +4,7 @@ import androidx.room.*
 import dam.pmdm.tripplanner.data.local.entity.ViajeEntity
 
 /**
- * DAO  para la entidad [ViajeEntity].
+ * DAO para la entidad [ViajeEntity].
  * Define las operaciones de acceso a la base de datos local Room
  * para la tabla VIAJE.
  *

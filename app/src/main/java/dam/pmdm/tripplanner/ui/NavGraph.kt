@@ -66,7 +66,8 @@ object Rutas {
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = viewModel(),
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    startDestination: String
 ) {
     val context = LocalContext.current
     val db = TripPlannerDatabase.getInstance(context)
@@ -95,7 +96,6 @@ fun NavGraph(
         }
     }
 
-    val startDestination = if (authViewModel.estaAutenticado) Rutas.MAIN else Rutas.LOGIN
 
     NavHost(
         navController = navController,

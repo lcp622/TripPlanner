@@ -16,6 +16,19 @@ import com.google.firebase.firestore.FirebaseFirestore
 import dam.pmdm.tripplanner.ui.theme.*
 import kotlinx.coroutines.tasks.await
 
+/**
+ * Pantalla para crear un nuevo gasto en un viaje.
+ * Carga los participantes del viaje desde Firestore al iniciarse
+ * para calcular el reparto automático entre todos ellos.
+ *
+ * Realiza validaciones en tiempo real sobre el concepto e importe
+ * antes de permitir crear el gasto.
+ *
+ * @param idViaje Identificador del viaje al que pertenece el gasto
+ * @param viewModel ViewModel que gestiona la lógica de gastos
+ * @param onGastoCreado Callback que se ejecuta al crear el gasto correctamente
+ * @param onVolver Callback que navega a la pantalla anterior
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrearGastoScreen(
@@ -30,9 +43,11 @@ fun CrearGastoScreen(
     var categoriaSeleccionada by remember { mutableStateOf("OTROS") }
     var errorGeneral by remember { mutableStateOf("") }
     var expandedCategoria by remember { mutableStateOf(false) }
+
+    /** Lista de participantes del viaje cargada desde Firestore para el reparto */
     var participantes by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
 
-    // Validaciones en tiempo real
+    // Validaciones en tiempo real sobre los campos del formulario
     val errorConcepto = if (concepto.isNotBlank() && concepto.length < 3)
         "El concepto debe tener al menos 3 caracteres" else ""
     val errorImporte = if (importe.isBlank()) ""
@@ -42,6 +57,7 @@ fun CrearGastoScreen(
 
     val categorias = listOf("ALOJAMIENTO", "TRANSPORTE", "COMIDA", "OCIO", "OTROS")
 
+    // Cargar participantes desde Firestore al entrar en la pantalla
     LaunchedEffect(idViaje) {
         val snapshot = FirebaseFirestore.getInstance()
             .collection("viajes").document(idViaje)
@@ -84,6 +100,7 @@ fun CrearGastoScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Campo de concepto del gasto
             OutlinedTextField(
                 value = concepto,
                 onValueChange = { concepto = it },
@@ -97,6 +114,7 @@ fun CrearGastoScreen(
                 } else null
             )
 
+            // Campo de importe con validación numérica
             OutlinedTextField(
                 value = importe,
                 onValueChange = { importe = it },
@@ -110,6 +128,7 @@ fun CrearGastoScreen(
                 } else null
             )
 
+            // Selector de categoría del gasto
             ExposedDropdownMenuBox(
                 expanded = expandedCategoria,
                 onExpandedChange = { expandedCategoria = it }
@@ -142,6 +161,7 @@ fun CrearGastoScreen(
                 }
             }
 
+            // Campo de notas adicionales opcional
             OutlinedTextField(
                 value = notas,
                 onValueChange = { notas = it },
@@ -152,6 +172,7 @@ fun CrearGastoScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Indicador informativo del número de personas en el reparto
             if (participantes.isNotEmpty()) {
                 Card(
                     colors = CardDefaults.cardColors(
@@ -172,14 +193,17 @@ fun CrearGastoScreen(
                 Text(text = errorGeneral, color = MaterialTheme.colorScheme.error)
             }
 
+            // Botón de creación con validación previa
             Button(
                 onClick = {
+                    // Validar campos antes de crear el gasto
                     when {
                         concepto.isBlank() -> errorGeneral = "El concepto es obligatorio"
                         importe.isBlank() -> errorGeneral = "El importe es obligatorio"
                         errorImporte.isNotEmpty() -> errorGeneral = errorImporte
                         else -> {
                             errorGeneral = ""
+                            // Obtener datos del usuario autenticado como pagador
                             val user = FirebaseAuth.getInstance().currentUser
                             val idUsuario = user?.uid ?: ""
                             val nombreUsuario = user?.displayName

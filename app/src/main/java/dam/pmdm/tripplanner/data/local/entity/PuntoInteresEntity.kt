@@ -23,7 +23,7 @@ import androidx.room.PrimaryKey
  * @property idPunto Identificador único del punto de interés
  * @property idViaje Identificador del viaje al que pertenece el punto
  * @property nombre Nombre descriptivo del punto de interés
- * @property categoria Categoría del punto (ATRACCION, RESTAURANTE, HOTEL, MUSEO, MONUMENTO, OTRO)
+ * @property categoria Categoría del punto (ATRACCIÓN, RESTAURANTE, HOTEL, MUSEO, MONUMENTO, OTRO)
  * @property latitud Coordenada de latitud del punto en el mapa
  * @property longitud Coordenada de longitud del punto en el mapa
  * @property descripcion Descripción opcional del punto de interés

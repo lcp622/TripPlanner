@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,8 +31,19 @@ import dam.pmdm.tripplanner.data.repository.GastoRepository
 import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.platform.LocalLocale
 
+/**
+ * Pantalla que muestra los gastos de un viaje concreto.
+ * Incluye un resumen del total gastado versus presupuesto, buscador,
+ * filtros por categoría y la lista de gastos con sus repartos.
+ *
+ * @param idViaje Identificador del viaje cuyos gastos se muestran
+ * @param presupuesto Presupuesto total del viaje para calcular el restante
+ * @param viewModel ViewModel que gestiona la lógica de gastos
+ * @param repository Repositorio para obtener los repartos en tiempo real
+ * @param onNuevoGasto Callback que navega a la pantalla de crear gasto
+ * @param onEditarGasto Callback que navega a la pantalla de editar gasto con el id del gasto
+ */
 @Composable
 fun GastosViajeScreen(
     idViaje: String,
@@ -42,9 +54,14 @@ fun GastosViajeScreen(
     onEditarGasto: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    /** Texto de búsqueda para filtrar gastos por concepto o pagador */
     var textoBusqueda by remember { mutableStateOf("") }
+
+    /** Categoría seleccionada para filtrar — "TODAS" muestra todos los gastos */
     var filtroCategoria by remember { mutableStateOf("TODAS") }
 
+    // Cargar los gastos del viaje al entrar en la pantalla
     LaunchedEffect(idViaje) {
         viewModel.cargarGastos(idViaje)
     }
@@ -69,6 +86,7 @@ fun GastosViajeScreen(
                 )
             }
             is GastoUiState.Success -> {
+                // Aplicar filtros de búsqueda y categoría sobre la lista de gastos
                 val gastosFiltrados = state.gastos.filter { gasto ->
                     (textoBusqueda.isBlank() ||
                             gasto.concepto.contains(textoBusqueda, ignoreCase = true) ||
@@ -76,6 +94,7 @@ fun GastosViajeScreen(
                             (filtroCategoria == "TODAS" || gasto.categoria == filtroCategoria)
                 }
 
+                // Estado vacío cuando no hay gastos en el viaje
                 if (state.gastos.isEmpty()) {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
@@ -104,7 +123,7 @@ fun GastosViajeScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Card resumen
+                        // Tarjeta resumen con total gastado y presupuesto restante
                         item {
                             val totalGastado = viewModel.totalGastos(state.gastos)
                             val restante = presupuesto - totalGastado
@@ -145,6 +164,7 @@ fun GastosViajeScreen(
                                             color = Color.White.copy(alpha = 0.8f),
                                             fontSize = 13.sp
                                         )
+                                        // Mostrar en rojo si se ha superado el presupuesto
                                         Text(
                                             text = "€${String.format(LocalLocale.current.platformLocale, "%.2f", restante)}",
                                             color = if (restante < 0) Color(0xFFFF5252) else Color.White,
@@ -157,7 +177,7 @@ fun GastosViajeScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        // Buscador
+                        // Campo de búsqueda por concepto o pagador
                         item {
                             OutlinedTextField(
                                 value = textoBusqueda,
@@ -172,7 +192,7 @@ fun GastosViajeScreen(
                             )
                         }
 
-                        // Filtros por categoría
+                        // Filtros por categoría con chips seleccionables
                         item {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -204,7 +224,7 @@ fun GastosViajeScreen(
                             }
                         }
 
-                        // Resultados
+                        // Estado vacío cuando el filtro no encuentra resultados
                         if (gastosFiltrados.isEmpty()) {
                             item {
                                 Box(
@@ -252,6 +272,17 @@ fun GastosViajeScreen(
     }
 }
 
+/**
+ * Tarjeta que muestra los datos de un gasto con sus acciones y reparto.
+ * Permite editar y eliminar el gasto, y expandir el reparto entre participantes.
+ * El usuario actual puede marcar su parte del reparto como saldada.
+ *
+ * @param gasto Entidad del gasto a mostrar
+ * @param onEliminar Callback que elimina el gasto
+ * @param onEditar Callback que navega a la pantalla de edición
+ * @param repository Repositorio para escuchar los repartos en tiempo real
+ * @param viewModel ViewModel para marcar repartos como saldados
+ */
 @Composable
 fun GastoCard(
     gasto: GastoEntity,
@@ -260,12 +291,20 @@ fun GastoCard(
     repository: GastoRepository,
     viewModel: GastoViewModel
 ) {
+    /** Controla la visibilidad del diálogo de confirmación de eliminación */
     val mostrarDialogo = remember { mutableStateOf(false) }
+
+    /** Controla si el reparto está expandido o colapsado */
     var expandido by remember { mutableStateOf(false) }
+
+    /** Repartos del gasto obtenidos en tiempo real desde Firestore */
     val repartos by repository.obtenerRepartos(gasto.idViaje, gasto.idGasto)
         .collectAsState(initial = emptyList())
+
+    /** UID del usuario autenticado para identificar su reparto */
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
+    // Diálogo de confirmación antes de eliminar el gasto
     if (mostrarDialogo.value) {
         AlertDialog(
             onDismissRequest = { mostrarDialogo.value = false },
@@ -291,6 +330,8 @@ fun GastoCard(
     }
 
     val dateFormat = SimpleDateFormat("dd MMM yyyy", LocalLocale.current.platformLocale)
+
+    /** Color asignado a la categoría del gasto */
     val categoriaColor = when (gasto.categoria) {
         "ALOJAMIENTO" -> Color(0xFF9C27B0)
         "TRANSPORTE" -> Color(0xFF2196F3)
@@ -310,6 +351,7 @@ fun GastoCard(
                 modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Icono de la categoría con fondo semitransparente
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -380,8 +422,11 @@ fun GastoCard(
                 }
             }
 
+            // Sección de reparto — solo visible si hay repartos
             if (repartos.isNotEmpty()) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
+                // Botón para expandir/colapsar el reparto
                 TextButton(onClick = { expandido = !expandido }, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = if (expandido) "Ocultar reparto" else "Ver reparto (${repartos.size})",
@@ -396,6 +441,7 @@ fun GastoCard(
                     )
                 }
 
+                // Lista de repartos por participante
                 if (expandido) {
                     Column(
                         modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp),
@@ -406,12 +452,15 @@ fun GastoCard(
                             val nombre = reparto["nombreUsuario"]?.toString() ?: "Usuario"
                             val importe = (reparto["importeAsignado"] as? Double) ?: 0.0
                             val saldado = reparto["saldado"] as? Boolean ?: false
+
+                            /** Indica si este reparto pertenece al usuario autenticado */
                             val esMiReparto = idUsuario == currentUserId
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+                                // Icono de estado: check si saldado, persona si pendiente
                                 Box(
                                     modifier = Modifier
                                         .size(32.dp)
@@ -440,6 +489,7 @@ fun GastoCard(
                                     fontSize = 13.sp,
                                     color = if (saldado) MaterialTheme.colorScheme.onSurfaceVariant else TripBlue
                                 )
+                                // Mostrar botón de saldar solo al usuario con reparto pendiente
                                 if (esMiReparto && !saldado) {
                                     Button(
                                         onClick = { viewModel.marcarComoSaldado(gasto.idViaje, gasto.idGasto, currentUserId) },

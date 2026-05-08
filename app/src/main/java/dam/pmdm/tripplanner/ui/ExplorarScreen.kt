@@ -25,22 +25,59 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
 
+/**
+ * Modelo de datos que representa un punto de interés obtenido de OpenStreetMap.
+ *
+ * @property nombre Nombre del lugar obtenido de las etiquetas OSM
+ * @property tipo Categoría del lugar (por ejemplo "🏛️ Museos")
+ * @property emoji Emoji representativo de la categoría para mostrar en la UI
+ */
 data class PuntoInteres(
     val nombre: String,
     val tipo: String,
     val emoji: String
 )
 
+/**
+ * Pantalla de exploración de destinos turísticos.
+ * Permite buscar una ciudad o país y obtener una lista de puntos de interés
+ * organizados por categoría usando dos APIs externas gratuitas:
+ *
+ * - **Nominatim** (OpenStreetMap): convierte el nombre del destino en coordenadas
+ * - **Overpass API**: busca puntos de interés por tipo en un radio alrededor de las coordenadas
+ *
+ * Se elige esta implementación sin API key para evitar dependencias de servicios de pago
+ * y simplificar el despliegue de la app en entornos académicos.
+ *
+ * Las peticiones HTTP se ejecutan en [Dispatchers.IO] para no bloquear el hilo principal.
+ */
 @Composable
 fun ExplorarScreen() {
+    /** Texto introducido por el usuario en el campo de búsqueda */
     var busqueda by remember { mutableStateOf("") }
+
+    /** Nombre del destino encontrado por Nominatim para mostrar en los resultados */
     var destino by remember { mutableStateOf("") }
+
+    /** Mapa de categoría a lista de puntos de interés encontrados */
     var puntos by remember { mutableStateOf<Map<String, List<PuntoInteres>>>(emptyMap()) }
+
+    /** Indica si hay una búsqueda en curso */
     var isLoading by remember { mutableStateOf(false) }
+
+    /** Mensaje de error a mostrar si la búsqueda falla */
     var error by remember { mutableStateOf("") }
+
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    /**
+     * Ejecuta la búsqueda de puntos de interés para el destino introducido.
+     * Pasos realizados:
+     * 1. Geocodifica el destino con Nominatim para obtener coordenadas
+     * 2. Consulta Overpass API con una query que busca varios tipos de lugares
+     * 3. Parsea los resultados y los agrupa por categoría (máx. 15 por categoría)
+     */
     fun buscarDestino() {
         if (busqueda.isBlank()) return
         scope.launch {
@@ -48,6 +85,7 @@ fun ExplorarScreen() {
             error = ""
             puntos = emptyMap()
             try {
+                // Paso 1: geocodificar el destino con Nominatim
                 val query = URLEncoder.encode(busqueda, "UTF-8")
                 val nominatimUrl = "https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1"
                 val nominatimResponse = withContext(Dispatchers.IO) {
@@ -67,11 +105,13 @@ fun ExplorarScreen() {
                     return@launch
                 }
 
+                // Extraer coordenadas del primer resultado
                 val lugar = nominatimJson.getJSONObject(0)
                 val lat = lugar.getDouble("lat")
                 val lon = lugar.getDouble("lon")
                 destino = lugar.getString("display_name").split(",").first().trim()
 
+                // Paso 2: buscar puntos de interés en un radio de 20km con Overpass API
                 val radio = 20000
                 val overpassQuery = """
                     [out:json][timeout:30];
@@ -99,6 +139,7 @@ fun ExplorarScreen() {
                     conn.inputStream.bufferedReader().readText()
                 }
 
+                // Paso 3: parsear y agrupar los resultados por categoría
                 val overpassJson = JSONObject(overpassResponse)
                 val elements = overpassJson.getJSONArray("elements")
                 val resultado = mutableMapOf<String, MutableList<PuntoInteres>>()
@@ -107,8 +148,11 @@ fun ExplorarScreen() {
                     val element = elements.getJSONObject(i)
                     if (!element.has("tags")) continue
                     val tags = element.getJSONObject("tags")
+
+                    // Ignorar lugares sin nombre en ningún idioma
                     val nombre = tags.optString("name", tags.optString("name:es", "")).ifBlank { continue }
 
+                    // Determinar categoría y emoji según las etiquetas OSM del elemento
                     val (categoria, emoji) = when {
                         tags.has("tourism") && tags.getString("tourism") == "museum" -> "🏛️ Museos" to "🏛️"
                         tags.has("historic") && tags.getString("historic") == "monument" -> "🗿 Monumentos" to "🗿"
@@ -121,6 +165,8 @@ fun ExplorarScreen() {
                     }
 
                     if (!resultado.containsKey(categoria)) resultado[categoria] = mutableListOf()
+
+                    // Limitar a 15 resultados por categoría para no saturar la pantalla
                     if ((resultado[categoria]?.size ?: 0) < 15) {
                         resultado[categoria]?.add(PuntoInteres(nombre, categoria, emoji))
                     }
@@ -157,6 +203,7 @@ fun ExplorarScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Campo de búsqueda con teclado de tipo Search para mostrar el botón de lupa
         OutlinedTextField(
             value = busqueda,
             onValueChange = { busqueda = it },
@@ -181,79 +228,90 @@ fun ExplorarScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = TripBlue)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Buscando lugares de interés...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        when {
+            // Estado de carga mientras se consultan las APIs
+            isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = TripBlue)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Buscando lugares de interés...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
-        } else if (error.isNotEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = error, color = MaterialTheme.colorScheme.error)
-            }
-        } else if (puntos.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "✈️", fontSize = 48.sp)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "¿A dónde quieres ir?",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Ej: Roma, París, Tokio, España...",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            // Estado de error si la búsqueda falló
+            error.isNotEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = error, color = MaterialTheme.colorScheme.error)
                 }
             }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    Text(
-                        text = "📍 $destino",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TripBlue
-                    )
+            // Estado vacío antes de realizar la primera búsqueda
+            puntos.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "✈️", fontSize = 48.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "¿A dónde quieres ir?",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Ej: Roma, París, Tokio, España...",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-
-                puntos.entries.forEach { (categoria, lista) ->
+            }
+            // Resultados agrupados por categoría
+            else -> {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                     item {
                         Text(
-                            text = categoria,
-                            fontSize = 14.sp,
+                            text = "📍 $destino",
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TripTextSecondary
+                            color = TripBlue
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(2.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                lista.forEachIndexed { index, punto ->
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        modifier = Modifier.padding(vertical = 6.dp)
-                                    ) {
-                                        Text(text = punto.emoji, fontSize = 20.sp)
-                                        Text(
-                                            text = punto.nombre,
-                                            fontSize = 14.sp,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
-                                    if (index < lista.size - 1) {
-                                        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                    }
+
+                    // Una tarjeta por categoría con la lista de puntos de interés
+                    puntos.entries.forEach { (categoria, lista) ->
+                        item {
+                            Text(
+                                text = categoria,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TripTextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(2.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    lista.forEachIndexed { index, punto ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            modifier = Modifier.padding(vertical = 6.dp)
+                                        ) {
+                                            Text(text = punto.emoji, fontSize = 20.sp)
+                                            Text(
+                                                text = punto.nombre,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                        // Separador entre elementos excepto el último
+                                        if (index < lista.size - 1) {
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                        }
                                     }
                                 }
                             }

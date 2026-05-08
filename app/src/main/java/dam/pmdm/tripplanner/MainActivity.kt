@@ -18,9 +18,13 @@ import dam.pmdm.tripplanner.ui.SettingsViewModel
 import dam.pmdm.tripplanner.ui.theme.TripPlannerTheme
 import java.util.concurrent.TimeUnit
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.runtime.remember
+import dam.pmdm.tripplanner.ui.auth.AuthViewModel
 class MainActivity : ComponentActivity() {
 
     private val settingsViewModel: SettingsViewModel by viewModels()
+    private val authViewModel: AuthViewModel by viewModels()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,10 +53,15 @@ class MainActivity : ComponentActivity() {
         )
         installSplashScreen()
         setContent {
-
             val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
+            val startDestination = remember {
+                if (authViewModel.estaAutenticado) "main" else "login"
+            }
             TripPlannerTheme(darkTheme = isDarkMode) {
-                NavGraph(settingsViewModel = settingsViewModel)
+                NavGraph(
+                    settingsViewModel = settingsViewModel,
+                    startDestination = startDestination
+                )
             }
         }
     }

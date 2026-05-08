@@ -25,6 +25,19 @@ import dam.pmdm.tripplanner.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * Pantalla principal del Itinerario que visualiza la planificación cronológica de un viaje.
+ *
+ * La pantalla observa el estado del [ActividadViewModel] y reacciona ante tres estados:
+ * - **Loading**: Muestra un indicador de carga.
+ * - **Error**: Presenta el mensaje de error correspondiente.
+ * - **Success**: Renderiza la lista de actividades agrupadas por días. Si la lista está vacía,
+ *   muestra una ilustración y un mensaje invitando al usuario a crear contenido.
+ *
+ * @param viewModel Instancia del ViewModel que provee el flujo de datos y las acciones CRUD.
+ * @param onNuevaActividad Callback ejecutado al pulsar el botón flotante (FAB) para añadir actividad.
+ * @param onEditarActividad Callback ejecutado al solicitar la edición de una actividad, pasando su ID.
+ */
 @Composable
 fun ItinerarioScreen(
     viewModel: ActividadViewModel,
@@ -74,6 +87,7 @@ fun ItinerarioScreen(
                         )
                     }
                 } else {
+                    // Lógica para agrupar las actividades por el día del año
                     val actividadesPorDia = state.actividades.groupBy { actividad ->
                         val cal = Calendar.getInstance()
                         cal.timeInMillis = actividad.fecha
@@ -91,6 +105,7 @@ fun ItinerarioScreen(
                             val fecha = actividades.first().fecha
                             val dateFormat = SimpleDateFormat("EEEE, dd MMM", Locale.forLanguageTag("es-ES"))
 
+                            // Cabecera de grupo: Muestra el número de día y la fecha formateada
                             item {
                                 Text(
                                     text = "Día ${diaIndex + 1} · ${dateFormat.format(Date(fecha))}",
@@ -101,6 +116,7 @@ fun ItinerarioScreen(
                                 )
                             }
 
+                            // Renderizado de las tarjetas de actividad para el día actual
                             items(actividades) { actividad ->
                                 ActividadCard(
                                     actividad = actividad,
@@ -114,6 +130,7 @@ fun ItinerarioScreen(
             }
         }
 
+        // Botón Flotante para creación de actividades
         FloatingActionButton(
             onClick = onNuevaActividad,
             modifier = Modifier
@@ -127,6 +144,19 @@ fun ItinerarioScreen(
     }
 }
 
+/**
+ * Componente visual para representar una actividad individual en una tarjeta.
+ *
+ * Muestra información clave como hora de inicio (dentro de un círculo decorativo),
+ * título, ubicación con icono y descripción limitada a 2 líneas.
+ *
+ * Implementa un mecanismo de seguridad mediante un [AlertDialog] para confirmar
+ * la eliminación de la actividad antes de ejecutar el callback.
+ *
+ * @param actividad Entidad [ActividadEntity] con los datos a visualizar.
+ * @param onEliminar Callback que se invoca tras la confirmación positiva del diálogo de borrado.
+ * @param onEditar Callback que se invoca al pulsar el botón de edición.
+ */
 @Composable
 fun ActividadCard(
     actividad: ActividadEntity,
@@ -135,6 +165,7 @@ fun ActividadCard(
 ) {
     val mostrarDialogo = remember { mutableStateOf(false) }
 
+    // Diálogo de confirmación para borrado
     if (mostrarDialogo.value) {
         AlertDialog(
             onDismissRequest = { mostrarDialogo.value = false },
@@ -169,6 +200,7 @@ fun ActividadCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Indicador de hora (si existe)
             if (actividad.horaInicio != null) {
                 Box(
                     modifier = Modifier
@@ -188,12 +220,15 @@ fun ActividadCard(
             }
 
             Column(modifier = Modifier.weight(1f)) {
+                // Título de la actividad
                 Text(
                     text = actividad.titulo,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+
+                // Lugar de la actividad
                 if (actividad.lugar != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -211,6 +246,8 @@ fun ActividadCard(
                         )
                     }
                 }
+
+                // Descripción opcional (truncada a 2 líneas)
                 if (actividad.descripcion != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -222,6 +259,7 @@ fun ActividadCard(
                 }
             }
 
+            // Acciones de la tarjeta
             Row {
                 IconButton(onClick = onEditar) {
                     Icon(

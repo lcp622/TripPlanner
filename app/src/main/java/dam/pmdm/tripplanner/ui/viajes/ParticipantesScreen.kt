@@ -27,6 +27,22 @@ import dam.pmdm.tripplanner.data.repository.FirestoreViajeRepository
 import dam.pmdm.tripplanner.ui.theme.*
 import kotlinx.coroutines.launch
 
+/**
+ * Pantalla que muestra y gestiona los participantes de un viaje.
+ * Permite añadir nuevos participantes por email y eliminar los existentes.
+ *
+ * El usuario autenticado no aparece en la lista — solo ve a los demás
+ * participantes. El propietario (Admin) no puede ser eliminado.
+ *
+ * Límite de participantes: máximo 5 por viaje. Si se alcanza el límite,
+ * el botón FAB cambia de color y se muestra un diálogo informativo.
+ *
+ * Los participantes se sincronizan en tiempo real desde Firestore y se
+ * cachean en Room en cada actualización para acceso offline.
+ *
+ * @param idViaje Identificador del viaje cuyos participantes se gestionan
+ * @param repository Repositorio para obtener y gestionar participantes en Firestore
+ */
 @Composable
 fun ParticipantesScreen(
     idViaje: String,
@@ -36,9 +52,14 @@ fun ParticipantesScreen(
         factory = ParticipantesViewModelFactory(repository)
     )
     val uiState by participantesViewModel.uiState.collectAsState()
+
+    /** Lista de participantes en tiempo real desde Firestore */
     val participantes by repository.obtenerParticipantes(idViaje).collectAsState(initial = emptyList())
+
+    /** UID del usuario autenticado para filtrarlo de la lista */
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
+    /** Lista filtrada sin el usuario autenticado — el usuario ya sabe que está en el viaje */
     val participantesFiltrados = participantes.filter {
         it["idUsuario"]?.toString() != currentUserId
     }
@@ -47,10 +68,13 @@ fun ParticipantesScreen(
     val mostrarLimiteAlcanzado = remember { mutableStateOf(false) }
     val emailNuevo = remember { mutableStateOf("") }
     val error = remember { mutableStateOf("") }
+
+    /** Participante seleccionado para eliminar — activa el diálogo de confirmación */
     val participanteAEliminar = remember { mutableStateOf<Map<String, Any>?>(null) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // Sincronizar participantes en Room cada vez que cambia la lista de Firestore
     LaunchedEffect(participantes) {
         if (participantes.isNotEmpty()) {
             try {
@@ -61,6 +85,8 @@ fun ParticipantesScreen(
                             val idUsuario = participante["idUsuario"]?.toString() ?: return@forEach
                             val esAdmin = participante["esAdmin"] as? Boolean ?: false
                             val fechaUnion = (participante["fechaUnion"] as? Long) ?: System.currentTimeMillis()
+
+                            // Cachear en Room usando el formato "{idViaje}_{idUsuario}" como id
                             db.participanteDao().insertar(
                                 ParticipanteEntity(
                                     idParticipante = "${idViaje}_${idUsuario}",
@@ -81,9 +107,11 @@ fun ParticipantesScreen(
         }
     }
 
+    // Reaccionar a los cambios de estado del ViewModel para cerrar el diálogo o mostrar errores
     LaunchedEffect(uiState) {
         when (uiState) {
             is ParticipanteUiState.Success -> {
+                // Cerrar el diálogo y limpiar el formulario al añadir con éxito
                 mostrarDialogoAnadir.value = false
                 emailNuevo.value = ""
                 error.value = ""
@@ -96,6 +124,7 @@ fun ParticipantesScreen(
         }
     }
 
+    // Diálogo informativo cuando se alcanza el límite de 5 participantes
     if (mostrarLimiteAlcanzado.value) {
         AlertDialog(
             onDismissRequest = { mostrarLimiteAlcanzado.value = false },
@@ -109,6 +138,7 @@ fun ParticipantesScreen(
         )
     }
 
+    // Diálogo para añadir un nuevo participante por email
     if (mostrarDialogoAnadir.value) {
         AlertDialog(
             onDismissRequest = {
@@ -154,6 +184,7 @@ fun ParticipantesScreen(
                             participantesViewModel.anadirParticipante(idViaje, emailNuevo.value)
                         }
                     },
+                    // Deshabilitar el botón mientras se procesa la petición
                     enabled = uiState !is ParticipanteUiState.Loading,
                     colors = ButtonDefaults.buttonColors(containerColor = TripBlue)
                 ) {
@@ -177,6 +208,7 @@ fun ParticipantesScreen(
         )
     }
 
+    // Diálogo de confirmación antes de eliminar un participante
     participanteAEliminar.value?.let { p ->
         AlertDialog(
             onDismissRequest = { participanteAEliminar.value = null },
@@ -207,6 +239,7 @@ fun ParticipantesScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        // Estado vacío cuando no hay participantes además del usuario actual
         if (participantesFiltrados.isEmpty()) {
             Column(
                 modifier = Modifier.align(Alignment.Center),
@@ -233,6 +266,7 @@ fun ParticipantesScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Contador de participantes — se muestra en rojo si se ha alcanzado el límite
                 item {
                     Text(
                         text = "${participantes.size}/5 participantes",
@@ -243,6 +277,7 @@ fun ParticipantesScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                 }
 
+                // Lista de participantes filtrados (sin el usuario actual)
                 items(participantesFiltrados) { participante ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -254,6 +289,7 @@ fun ParticipantesScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            // Avatar circular con icono de persona
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
@@ -280,6 +316,7 @@ fun ParticipantesScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                            // El Admin muestra badge y no puede ser eliminado
                             if (participante["esAdmin"] == true) {
                                 Box(
                                     modifier = Modifier
@@ -294,6 +331,7 @@ fun ParticipantesScreen(
                                     )
                                 }
                             } else {
+                                // Los participantes no admin pueden ser eliminados
                                 IconButton(
                                     onClick = { participanteAEliminar.value = participante }
                                 ) {
@@ -311,6 +349,7 @@ fun ParticipantesScreen(
             }
         }
 
+        // FAB para añadir participante — gris si se ha alcanzado el límite
         FloatingActionButton(
             onClick = {
                 if (participantes.size >= 5) {

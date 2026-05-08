@@ -57,7 +57,17 @@ class AuthRepository(private val context: Context) {
             guardarUsuarioEnRoom(user)
             Result.success(user)
         } catch (e: Exception) {
-            Result.failure(e)
+            val mensajeTraducido = when {
+                e.message?.contains("email address is already") == true ||
+                        e.message?.contains("email-already-in-use") == true -> "Ya existe una cuenta con ese email"
+                e.message?.contains("badly formatted") == true ||
+                        e.message?.contains("invalid-email") == true -> "El formato del email no es válido"
+                e.message?.contains("weak-password") == true ||
+                        e.message?.contains("least 6 characters") == true -> "La contraseña debe tener al menos 6 caracteres"
+                e.message?.contains("network") == true -> "Error de conexión. Comprueba tu internet"
+                else -> "Error al registrarse. Inténtalo de nuevo"
+            }
+            Result.failure(Exception(mensajeTraducido))
         }
     }
 
@@ -77,7 +87,24 @@ class AuthRepository(private val context: Context) {
             guardarUsuarioEnRoom(user)
             Result.success(user)
         } catch (e: Exception) {
-            Result.failure(e)
+            android.util.Log.e("AuthRepository", "Error login: ${e.message}")
+            val mensajeTraducido = when {
+                e.message?.contains("Given String is empty or null") == true ->
+                    "El email y la contraseña son obligatorios"
+                e.message?.contains("supplied auth credential is incorrect") == true ||
+                        e.message?.contains("malformed or has expired") == true ->
+                    "Email o contraseña incorrectos"
+                e.message?.contains("badly formatted") == true ||
+                        e.message?.contains("invalid-email") == true ->
+                    "El formato del email no es válido"
+                e.message?.contains("blocked all requests") == true ||
+                        e.message?.contains("too-many-requests") == true ->
+                    "Demasiados intentos fallidos. Inténtalo más tarde"
+                e.message?.contains("network") == true ->
+                    "Error de conexión. Comprueba tu internet"
+                else -> "Error al iniciar sesión. Inténtalo de nuevo"
+            }
+            Result.failure(Exception(mensajeTraducido))
         }
     }
 

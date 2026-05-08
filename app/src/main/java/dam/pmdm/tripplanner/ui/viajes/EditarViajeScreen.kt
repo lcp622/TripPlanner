@@ -18,6 +18,22 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+/**
+ * Pantalla para editar los datos de un viaje existente.
+ * Los campos se inicializan con los datos actuales del viaje
+ * para que el usuario solo modifique lo que necesite.
+ *
+ * Usa [DatePickerDialog] nativo de Material3 para seleccionar fechas,
+ * inicializado con las fechas actuales del viaje.
+ *
+ * Realiza validaciones en tiempo real sobre nombre, destino, presupuesto
+ * y coherencia de fechas antes de permitir guardar los cambios.
+ *
+ * @param viaje Entidad del viaje con los datos actuales a editar
+ * @param viewModel ViewModel que gestiona la actualización del viaje
+ * @param onViajeActualizado Callback que se ejecuta al guardar los cambios
+ * @param onVolver Callback que navega a la pantalla anterior
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditarViajeScreen(
@@ -26,12 +42,14 @@ fun EditarViajeScreen(
     onViajeActualizado: () -> Unit,
     onVolver: () -> Unit
 ) {
+    // Inicializar campos con los datos actuales del viaje
     var nombre by remember { mutableStateOf(viaje.nombre) }
     var paisDestino by remember { mutableStateOf(viaje.paisDestino) }
     var descripcion by remember { mutableStateOf(viaje.descripcion ?: "") }
     var presupuesto by remember { mutableStateOf(viaje.presupuestoTotal.toString()) }
     var errorGeneral by remember { mutableStateOf("") }
 
+    // Validaciones en tiempo real sobre los campos del formulario
     val errorNombre = if (nombre.isNotBlank() && nombre.length < 3)
         "El nombre debe tener al menos 3 caracteres" else ""
     val errorDestino = if (paisDestino.isNotBlank() && paisDestino.length < 2)
@@ -43,6 +61,7 @@ fun EditarViajeScreen(
 
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
+    // Inicializar fechas desde los milisegundos del viaje actual
     var fechaInicioSeleccionada by remember {
         mutableStateOf(
             Instant.ofEpochMilli(viaje.fechaInicio).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -57,9 +76,13 @@ fun EditarViajeScreen(
     val errorFechas = if (fechaFinSeleccionada.isBefore(fechaInicioSeleccionada))
         "La fecha de fin debe ser posterior a la de inicio" else ""
 
+    /** Controla la visibilidad del DatePickerDialog de fecha de inicio */
     val mostrarPickerInicio = remember { mutableStateOf(false) }
+
+    /** Controla la visibilidad del DatePickerDialog de fecha de fin */
     val mostrarPickerFin = remember { mutableStateOf(false) }
 
+    // Inicializar los estados del DatePicker con las fechas actuales del viaje
     val fechaInicioPickerState = rememberDatePickerState(
         initialSelectedDateMillis = viaje.fechaInicio
     )
@@ -67,6 +90,7 @@ fun EditarViajeScreen(
         initialSelectedDateMillis = viaje.fechaFin
     )
 
+    // DatePickerDialog nativo de Material3 para la fecha de inicio
     if (mostrarPickerInicio.value) {
         DatePickerDialog(
             onDismissRequest = { mostrarPickerInicio.value = false },
@@ -87,6 +111,7 @@ fun EditarViajeScreen(
         }
     }
 
+    // DatePickerDialog nativo de Material3 para la fecha de fin
     if (mostrarPickerFin.value) {
         DatePickerDialog(
             onDismissRequest = { mostrarPickerFin.value = false },
@@ -141,6 +166,7 @@ fun EditarViajeScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Campo de nombre del viaje
             OutlinedTextField(
                 value = nombre,
                 onValueChange = { nombre = it },
@@ -154,6 +180,7 @@ fun EditarViajeScreen(
                 } else null
             )
 
+            // Campo de país o destino
             OutlinedTextField(
                 value = paisDestino,
                 onValueChange = { paisDestino = it },
@@ -167,6 +194,7 @@ fun EditarViajeScreen(
                 } else null
             )
 
+            // Campo de fecha de inicio — abre el DatePickerDialog al pulsar el icono
             OutlinedTextField(
                 value = fechaInicioSeleccionada.format(dateFormatter),
                 onValueChange = {},
@@ -182,6 +210,7 @@ fun EditarViajeScreen(
                 colors = tripTextFieldColors()
             )
 
+            // Campo de fecha de fin — abre el DatePickerDialog al pulsar el icono
             OutlinedTextField(
                 value = fechaFinSeleccionada.format(dateFormatter),
                 onValueChange = {},
@@ -201,6 +230,7 @@ fun EditarViajeScreen(
                 } else null
             )
 
+            // Campo de presupuesto con validación numérica
             OutlinedTextField(
                 value = presupuesto,
                 onValueChange = { presupuesto = it },
@@ -214,6 +244,7 @@ fun EditarViajeScreen(
                 } else null
             )
 
+            // Campo de descripción opcional
             OutlinedTextField(
                 value = descripcion,
                 onValueChange = { descripcion = it },
@@ -228,6 +259,7 @@ fun EditarViajeScreen(
                 Text(text = errorGeneral, color = MaterialTheme.colorScheme.error)
             }
 
+            // Botón de guardar con validación previa de todos los campos
             Button(
                 onClick = {
                     when {
@@ -237,12 +269,14 @@ fun EditarViajeScreen(
                         errorPresupuesto.isNotEmpty() -> errorGeneral = errorPresupuesto
                         else -> {
                             errorGeneral = ""
+                            // Convertir LocalDate a milisegundos para almacenar en la entidad
                             val inicio = fechaInicioSeleccionada
                                 .atStartOfDay(ZoneId.systemDefault())
                                 .toInstant().toEpochMilli()
                             val fin = fechaFinSeleccionada
                                 .atStartOfDay(ZoneId.systemDefault())
                                 .toInstant().toEpochMilli()
+                            // Actualizar solo los campos modificados manteniendo el resto
                             viewModel.actualizarViaje(
                                 viaje.copy(
                                     nombre = nombre,
