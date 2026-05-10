@@ -11,8 +11,15 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel que gestiona las preferencias de configuración de la aplicación.
- * Actualmente gestiona el modo oscuro, pero puede ampliarse con más preferencias.
+ * Actualmente gestiona el modo oscuro y el estado del onboarding,
+ * pero puede ampliarse con más preferencias en el futuro.
  *
+ * Se extiende [AndroidViewModel] en lugar de [ViewModel] para acceder al contexto
+ * de la aplicación necesario en [SettingsRepository] para inicializar el DataStore.
+ *
+ * Se instancia en [dam.pmdm.tripplanner.MainActivity] con `by viewModels()` y se pasa
+ * como parámetro a [dam.pmdm.tripplanner.ui.NavGraph] para que todas las pantallas
+ * puedan acceder a las preferencias sin necesidad de crear múltiples instancias.
  *
  * @param application Aplicación Android para acceder al contexto
  */
@@ -50,6 +57,34 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun toggleDarkMode(enabled: Boolean) {
         viewModelScope.launch {
             repository.setDarkMode(enabled)
+        }
+    }
+
+    /**
+     * Estado observable que indica si el onboarding ya ha sido completado.
+     * Se usa en [dam.pmdm.tripplanner.MainActivity] para calcular el destino
+     * inicial de navegación.
+     *
+     * El valor inicial es true para evitar que usuarios existentes vean
+     * un flash del onboarding mientras DataStore carga el valor real desde disco.
+     * En la primera ejecución real DataStore emitirá false y el onboarding
+     * se mostrará correctamente.
+     */
+    val onboardingCompletado: StateFlow<Boolean> = repository.onboardingCompletado
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    /**
+     * Marca el onboarding como completado en DataStore.
+     * Se llama al pulsar "Empezar" o "Omitir" en [dam.pmdm.tripplanner.ui.OnboardingScreen]
+     * para que no vuelva a mostrarse en futuras ejecuciones.
+     */
+    fun completarOnboarding() {
+        viewModelScope.launch {
+            repository.setOnboardingCompletado()
         }
     }
 }

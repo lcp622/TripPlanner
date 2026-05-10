@@ -47,6 +47,11 @@ class SettingsRepository(private val context: Context) {
             preferences[DARK_MODE_KEY] ?: false
         }
 
+    val onboardingCompletado: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[booleanPreferencesKey("onboarding_completado")] ?: false
+        }
+
     /**
      * Actualiza la preferencia de modo oscuro en DataStore.
      * La operación es suspendida para ejecutarse en una corrutina
@@ -57,6 +62,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun setDarkMode(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[DARK_MODE_KEY] = enabled
+        }
+    }
+
+    suspend fun setOnboardingCompletado() {
+        context.dataStore.edit { preferences ->
+            preferences[booleanPreferencesKey("onboarding_completado")] = true
         }
     }
 }

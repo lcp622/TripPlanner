@@ -1,6 +1,5 @@
 package dam.pmdm.tripplanner.ui
 
-
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.Box
@@ -48,10 +47,17 @@ import dam.pmdm.tripplanner.ui.viajes.ViajeViewModel
 import dam.pmdm.tripplanner.ui.viajes.ViajeViewModelFactory
 import kotlinx.coroutines.launch
 
+/**
+ * Objeto que centraliza todas las rutas de navegación de la aplicación.
+ * Se usa como fuente única de verdad para los identificadores de ruta,
+ * evitando el uso de strings literales dispersos por el código.
+ */
 object Rutas {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val MAIN = "main"
+    /** Ruta del onboarding — solo se muestra en la primera ejecución */
+    const val ONBOARDING = "onboarding"
     const val CREAR_VIAJE = "crear_viaje"
     const val DETALLE_VIAJE = "detalle_viaje/{idViaje}"
     const val EDITAR_VIAJE = "editar_viaje/{idViaje}"
@@ -62,6 +68,21 @@ object Rutas {
     const val EDITAR_PERFIL = "editar_perfil"
 }
 
+/**
+ * Grafo de navegación principal de TripPlanner.
+ * Define todas las pantallas de la app y las transiciones entre ellas.
+ *
+ * Se desactivan las animaciones de transición con [EnterTransition.None] y
+ * [ExitTransition.None] para un comportamiento más fluido en la navegación.
+ *
+ * Los ViewModels y repositorios se crean aquí y se comparten entre pantallas
+ * para evitar recrearlos en cada navegación y mantener el estado de la UI.
+ *
+ * @param navController Controlador de navegación de Compose
+ * @param authViewModel ViewModel de autenticación
+ * @param settingsViewModel ViewModel de ajustes para el onboarding y modo oscuro
+ * @param startDestination Ruta inicial calculada en MainActivity según el estado del usuario
+ */
 @Composable
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
@@ -73,6 +94,7 @@ fun NavGraph(
     val db = TripPlannerDatabase.getInstance(context)
     val scope = rememberCoroutineScope()
 
+    // Repositorios y ViewModels compartidos entre pantallas
     val viajeRepository = FirestoreViajeRepository(db.viajeDao())
     val viajeViewModel: ViajeViewModel = viewModel(factory = ViajeViewModelFactory(viajeRepository))
 
@@ -82,6 +104,7 @@ fun NavGraph(
     val gastoRepository = GastoRepository(db.gastoDao())
     val gastoViewModel: GastoViewModel = viewModel(factory = GastoViewModelFactory(gastoRepository))
 
+    // Cachear el usuario autenticado en Room al iniciar la app
     LaunchedEffect(Unit) {
         scope.launch {
             val user = FirebaseAuth.getInstance().currentUser
@@ -96,7 +119,6 @@ fun NavGraph(
         }
     }
 
-
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -106,6 +128,19 @@ fun NavGraph(
         popExitTransition = { ExitTransition.None }
     ) {
 
+        // Pantalla de onboarding — solo se muestra en la primera ejecución
+        composable(Rutas.ONBOARDING) {
+            OnboardingScreen(
+                onTerminar = {
+                    settingsViewModel.completarOnboarding()
+                    navController.navigate(Rutas.LOGIN) {
+                        popUpTo(Rutas.ONBOARDING) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Pantalla de inicio de sesión
         composable(Rutas.LOGIN) {
             LoginScreen(
                 onLoginExitoso = {
@@ -117,6 +152,7 @@ fun NavGraph(
             )
         }
 
+        // Pantalla de registro de nuevo usuario
         composable(Rutas.REGISTER) {
             RegisterScreen(
                 onRegistroExitoso = {
@@ -128,6 +164,7 @@ fun NavGraph(
             )
         }
 
+        // Pantalla principal con navegación por pestañas
         composable(Rutas.MAIN) {
             MainScreen(
                 settingsViewModel = settingsViewModel,
@@ -145,6 +182,7 @@ fun NavGraph(
             )
         }
 
+        // Pantalla de creación de un nuevo viaje
         composable(Rutas.CREAR_VIAJE) {
             CrearViajeScreen(
                 viewModel = viajeViewModel,
@@ -153,6 +191,7 @@ fun NavGraph(
             )
         }
 
+        // Pantalla de detalle de un viaje — carga el viaje desde Room o Firestore
         composable(Rutas.DETALLE_VIAJE) { backStackEntry ->
             val idViaje = backStackEntry.arguments?.getString("idViaje") ?: ""
             var viaje by remember(idViaje) { mutableStateOf<ViajeEntity?>(null) }
@@ -161,6 +200,7 @@ fun NavGraph(
                 viaje = viajeRepository.obtenerViajePorIdFirestore(idViaje)
             }
 
+            // Mostrar indicador de carga mientras se obtiene el viaje
             if (viaje == null) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -197,6 +237,7 @@ fun NavGraph(
             }
         }
 
+        // Pantalla de edición de actividad — carga la actividad desde Room
         composable(Rutas.EDITAR_ACTIVIDAD) { backStackEntry ->
             val idActividad = backStackEntry.arguments?.getString("idActividad") ?: ""
             var actividad by remember { mutableStateOf<dam.pmdm.tripplanner.data.local.entity.ActividadEntity?>(null) }
@@ -215,6 +256,7 @@ fun NavGraph(
             }
         }
 
+        // Pantalla de edición de viaje — carga el viaje desde Room o Firestore
         composable(Rutas.EDITAR_VIAJE) { backStackEntry ->
             val idViaje = backStackEntry.arguments?.getString("idViaje") ?: ""
             var viaje by remember(idViaje) { mutableStateOf<ViajeEntity?>(null) }
@@ -233,6 +275,7 @@ fun NavGraph(
             }
         }
 
+        // Pantalla de creación de actividad para un viaje
         composable(Rutas.CREAR_ACTIVIDAD) { backStackEntry ->
             val idViaje = backStackEntry.arguments?.getString("idViaje") ?: ""
             CrearActividadScreen(
@@ -243,6 +286,7 @@ fun NavGraph(
             )
         }
 
+        // Pantalla de creación de gasto para un viaje
         composable(Rutas.CREAR_GASTO) { backStackEntry ->
             val idViaje = backStackEntry.arguments?.getString("idViaje") ?: ""
             CrearGastoScreen(
@@ -253,6 +297,7 @@ fun NavGraph(
             )
         }
 
+        // Pantalla de edición de gasto — carga el gasto desde Room
         composable(Rutas.EDITAR_GASTO) { backStackEntry ->
             val idGasto = backStackEntry.arguments?.getString("idGasto") ?: ""
             var gasto by remember { mutableStateOf<dam.pmdm.tripplanner.data.local.entity.GastoEntity?>(null) }
@@ -271,6 +316,7 @@ fun NavGraph(
             }
         }
 
+        // Pantalla de edición de perfil del usuario
         composable(Rutas.EDITAR_PERFIL) {
             EditarPerfilScreen(
                 authViewModel = authViewModel,
