@@ -61,20 +61,26 @@ El proyecto incluye:
 - **1 prueba de integración** en `app/src/androidTest/` → requiere dispositivo o emulador
 
 ## Estructura del proyecto
+
+```
 dam.pmdm.tripplanner/
+│
 ├── data/
-│   ├── local/       → Room: DAOs, entidades, base de datos
-│   └── repository/  → Repositorios Firestore + Room
+│   ├── local/          # Room: DAOs, entidades, base de datos
+│   └── repository/     # Repositorios Firestore + Room
+│
 ├── ui/
-│   ├── auth/        → Login y registro
-│   ├── viajes/      → Viajes, detalle, rutas, participantes
-│   ├── itinerario/  → Actividades
-│   ├── gastos/      → Gastos y repartos
-│   ├── perfil/      → Perfil de usuario
-│   └── theme/       → Colores y estilos
+│   ├── auth/           # Login y registro
+│   ├── viajes/         # Viajes, detalle, rutas, participantes
+│   ├── itinerario/     # Actividades
+│   ├── gastos/         # Gastos y repartos
+│   ├── perfil/         # Perfil de usuario
+│   └── theme/          # Colores y estilos
+│
 ├── MainActivity.kt
 ├── NavGraph.kt
 └── NotificacionWorker.kt
+```
 
 ## Autora
 
