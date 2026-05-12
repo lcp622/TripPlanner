@@ -1,12 +1,12 @@
-# TripPlanner ✈️
+# TripPlanner 
 
 Aplicación Android para la planificación colaborativa de viajes, desarrollada con Kotlin y Jetpack Compose como Proyecto Intermodular del ciclo DAM.
 
-## 📱 Descripción
+##  Descripción
 
 TripPlanner permite planificar viajes de forma colaborativa con amigos y familia. Incluye gestión de itinerarios, gastos compartidos, mapa interactivo de puntos de interés y exploración de destinos turísticos.
 
-## 🚀 Funcionalidades principales
+##  Funcionalidades principales
 
 - Crear y gestionar viajes con fechas y presupuesto.
 - Planificar actividades en un itinerario compartido en tiempo real.
@@ -17,7 +17,7 @@ TripPlanner permite planificar viajes de forma colaborativa con amigos y familia
 - Modo oscuro / claro.
 - Acceso offline con caché local Room.
 
-## 🛠️ Tecnologías
+##  Tecnologías
 
 - **Kotlin** + **Jetpack Compose**
 - **Firebase Auth** + **Firebase Firestore**
@@ -28,13 +28,13 @@ TripPlanner permite planificar viajes de forma colaborativa con amigos y familia
 - **Coil** (carga de imágenes)
 - **Dokka** (documentación)
 
-## 📚 Documentación
+##  Documentación
 
 La documentación del código generada con Dokka está disponible en:
 
-🔗 https://lcp622.github.io/TripPlanner/
+https://lcp622.github.io/TripPlanner/
 
-## ⚙️ Instalación
+## Instalación
 
 ### Opción A — APK directa
 
@@ -54,13 +54,13 @@ La documentación del código generada con Dokka está disponible en:
 
 Los datos de prueba están precargados en Firebase Firestore con viajes, actividades y gastos de ejemplo.
 
-## 🧪 Pruebas
+## Pruebas
 
 El proyecto incluye:
 - **15 pruebas de unidad** en `app/src/test/` → ejecutar con clic derecho → *Run Tests*
 - **1 prueba de integración** en `app/src/androidTest/` → requiere dispositivo o emulador
 
-## 📁 Estructura del proyecto
+## Estructura del proyecto
 dam.pmdm.tripplanner/
 ├── data/
 │   ├── local/       → Room: DAOs, entidades, base de datos
@@ -76,10 +76,10 @@ dam.pmdm.tripplanner/
 ├── NavGraph.kt
 └── NotificacionWorker.kt
 
-## 👩‍💻 Autora
+## Autora
 
 Lucía — DAM Intermodular 2025/2026
 
-## 📄 Licencia
+## Licencia
 
 Proyecto académico — todos los derechos reservados.
